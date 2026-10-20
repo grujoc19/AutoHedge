@@ -3,7 +3,7 @@ from pathlib import Path
 from loguru import logger
 from swarms import Conversation
 
-from autohedge.workers import director_agent
+from autohedge.workers import build_director_agent
 
 
 class AutoHedge:
@@ -46,7 +46,7 @@ class AutoHedge:
         self.conversation.add(role="user", content=f"Task: {task}")
 
         try:
-            output = director_agent.run(task=task)
+            output = build_director_agent().run(task=task)
             self.conversation.add(role="director", content=output)
 
             if self.output_type == "list":
