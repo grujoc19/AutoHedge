@@ -6,11 +6,11 @@ partial data when quoteSummary fails.
 """
 
 import json
-import traceback
 from typing import Any, Optional
 
 import yfinance as yf
 from loguru import logger
+from autohedge.errors import ProviderError
 
 # Errors from yfinance when Yahoo returns 429 or non-JSON (rate limit / block)
 _RATE_LIMIT_EXCEPTIONS: tuple = (json.JSONDecodeError,)
@@ -33,9 +33,7 @@ def _df_to_json_serializable(df: Any) -> Any:
         import pandas as pd
 
         if isinstance(df, pd.DataFrame):
-            return json.loads(
-                df.to_json(orient="split", date_format="iso")
-            )
+            return json.loads(df.to_json(orient="split", date_format="iso"))
         return df
     except Exception:
         return None
@@ -54,15 +52,15 @@ def _safe_info(
     except _RATE_LIMIT_EXCEPTIONS as e:
         logger.warning(
             "Yahoo rate limit or invalid response (info): {}",
-            e,
+            type(e).__name__,
         )
         return (
             {},
             "Rate limited or invalid response from Yahoo (429).",
         )
-    except Exception as e:
-        logger.debug("get info failed: {}", e)
-        return {}, str(e)
+    except Exception:
+        logger.debug("Yahoo info unavailable")
+        return {}, "Yahoo info unavailable"
 
 
 def _safe_financials(ticker: yf.Ticker) -> dict[str, Any]:
@@ -116,13 +114,8 @@ def get_stock_quote(ticker: str) -> str:
         if hist is not None and not hist.empty:
             out["history"] = _df_to_json_serializable(hist)
         return json.dumps(out, default=str)
-    except Exception as e:
-        logger.error(
-            "get_stock_quote failed: {}\n{}",
-            e,
-            traceback.format_exc(),
-        )
-        return "{}"
+    except Exception:
+        raise ProviderError("yahoo", "request failed") from None
 
 
 def get_historical_prices(
@@ -157,13 +150,8 @@ def get_historical_prices(
         out: dict[str, Any] = {"symbol": symbol}
         out["history"] = _df_to_json_serializable(hist)
         return json.dumps(out, default=str)
-    except Exception as e:
-        logger.error(
-            "get_historical_prices failed: {}\n{}",
-            e,
-            traceback.format_exc(),
-        )
-        return "{}"
+    except Exception:
+        raise ProviderError("yahoo", "request failed") from None
 
 
 def get_quote_summary(
@@ -188,13 +176,8 @@ def get_quote_summary(
         financials = _safe_financials(t)
         out.update(financials)
         return json.dumps(out, default=str)
-    except Exception as e:
-        logger.error(
-            "get_quote_summary failed: {}\n{}",
-            e,
-            traceback.format_exc(),
-        )
-        return "{}"
+    except Exception:
+        raise ProviderError("yahoo", "request failed") from None
 
 
 def get_all_stock_data(
@@ -219,9 +202,7 @@ def get_all_stock_data(
 
         info, info_err = _safe_info(t)
         if info_err:
-            logger.warning(
-                "get_all_stock_data: info fetch failed: {}", info_err
-            )
+            logger.warning("get_all_stock_data: info fetch failed: {}", info_err)
 
         quote_data: dict[str, Any] = {"symbol": symbol, "info": info}
         if info_err:
@@ -246,13 +227,8 @@ def get_all_stock_data(
             out["history"] = history_serialized
 
         return json.dumps(out, default=str)
-    except Exception as e:
-        logger.error(
-            "get_all_stock_data failed: {}\n{}",
-            e,
-            traceback.format_exc(),
-        )
-        return "{}"
+    except Exception:
+        raise ProviderError("yahoo", "request failed") from None
 
 
 if __name__ == "__main__":

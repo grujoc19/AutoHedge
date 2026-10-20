@@ -190,7 +190,9 @@ Generate quantitative analysis for the {stock}
 }}
 """
 
-DIRECTOR_DECISION_PROMPT = "According to the thesis, {thesis}, should we execute this order: {task}"
+DIRECTOR_DECISION_PROMPT = (
+    "According to the thesis, {thesis}, should we execute this order: {task}"
+)
 
 # Director: discover tickers from task (no predefined list)
 DIRECTOR_TICKER_DISCOVERY_PROMPT = """

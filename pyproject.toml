@@ -1,64 +1,41 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core==2.5.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "autohedge"
 version = "0.1.5"
-description = "autohedge - TGSC"
+description = "Modular multi-agent market research for the AutoHedge fork"
+readme = "README.md"
 license = "MIT"
-authors = ["Kye Gomez <kye@apac.ai>"]
-homepage = "https://github.com/The-Swarm-Corporation/AutoHedge"
-documentation = "https://github.com/The-Swarm-Corporation/AutoHedge"  # Add this if you have documentation.
-readme = "README.md"  # Assuming you have a README.md
-repository = "https://github.com/The-Swarm-Corporation/AutoHedge"
-keywords = ["artificial intelligence", "deep learning", "optimizers", "Prompt Engineering"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.9"
+authors = [{name = "Kye Gomez", email = "kye@apac.ai"}]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "httpx>=0.28,<0.29",
+    "loguru>=0.7,<0.8",
+    "pydantic>=2.10,<3",
+    "python-dotenv>=1.0,<2",
+    "requests>=2.32,<3",
+    "rich>=14,<16",
+    "solders>=0.29,<0.30",
+    "swarms==16.0.1",
+    "yfinance>=1.7,<2",
 ]
 
-[tool.poetry.scripts]
+[project.scripts]
 autohedge = "autohedge.cli:main"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-rich = "*"
-swarms = "*"
-pydantic = "*"
-loguru = "*"
-swarm-models = "*"
-httpx = "*"
-solders = "*"
-yfinance = "*"
-python-dotenv = "*"
+[project.urls]
+Repository = "https://github.com/grujoc19/AutoHedge"
+Issues = "https://github.com/grujoc19/AutoHedge/issues"
 
+[dependency-groups]
+dev = ["ruff>=0.14,<0.15"]
 
-[tool.poetry.group.lint.dependencies]
-ruff = ">=0.1.6,<0.15.0"
-types-toml = "^0.10.8.1"
-types-redis = "^4.3.21.6"
-types-pytz = "^2023.3.0.0"
-black = "^23.1.0"
-types-chardet = "^5.0.4.6"
-mypy-protobuf = "^3.0.0"
-
-
-[tool.autopep8]
-max_line_length = 80
-ignore = "E501,W6"  # or ["E501", "W6"]
-in-place = true
-recursive = true
-aggressive = 3
-
+[tool.poetry]
+packages = [{include = "autohedge"}]
 
 [tool.ruff]
-line-length = 70
-
-[tool.black]
-line-length = 70
-target-version = ['py38']
-preview = true
+target-version = "py310"
+line-length = 88
+extend-exclude = ["experimental"]

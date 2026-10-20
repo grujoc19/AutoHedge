@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: Offline tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test without installed dependencies or API keys
+        run: python -m unittest discover -s tests -v
+
+  runtime:
+    name: Runtime tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    env:
+      SWARMS_TELEMETRY_ON: "false"
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - run: uv sync --locked --python ${{ matrix.python }}
+      - run: uv pip check
+      - run: uv run --locked python -m unittest discover -s tests/unit -v
+      - run: uv run --locked python -m unittest discover -s tests/integration -v
+
+  quality-and-build:
+    name: Lint and installed wheel
+    runs-on: ubuntu-latest
+    env:
+      SWARMS_TELEMETRY_ON: "false"
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - run: uv sync --locked --python 3.12
+      - run: uv run --locked ruff check autohedge tests scripts example.py
+      - run: uv run --locked ruff format --check autohedge tests scripts example.py
+      - run: uv build --no-sources
+      - run: uv run --locked python scripts/check_wheel.py dist/autohedge-*.whl

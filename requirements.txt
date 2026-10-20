@@ -1,9 +1,3 @@
-swarms
-pydantic
-loguru
-swarm-models
-fastapi 
-uvicorn 
-requests
-httpx
-solders
+# Compatibility entry point. Runtime dependencies live in pyproject.toml.
+# Use `uv sync --locked` for reproducible development installations.
+-e .

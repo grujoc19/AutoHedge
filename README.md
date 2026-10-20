@@ -1,123 +1,88 @@
 # AutoHedge
 
-[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/VapjxpSyHC3) [![Subscribe on YouTube](https://img.shields.io/badge/YouTube-Subscribe-red?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@kyegomez3242) [![Connect on LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/kye-g-38759a207/) [![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/swarms_corp)
+AutoHedge is a Python multi-agent market research project. This fork is being
+stabilized into a modular trading system in small, independently tested steps.
 
+**Current behavior:** each research cycle creates a fresh Swarms team and runs
+Director thesis -> Quant -> Sentiment -> Risk -> Director synthesis. Each stage
+receives the preceding results and returns bounded research text. It does not execute trades, enforce portfolio
+risk limits, or provide an integrated paper-trading engine. Market-data and
+Solana swap helpers exist separately; only Exa search is currently attached to
+the research agents. Numerical model output is not a verified market signal.
 
-AutoHedge is an enterprise-grade autonomous agent hedge fund that trades on your behalf. It combines swarm intelligence and specialized AI agents to perform end-to-end market analysis, risk management, and execution with minimal human intervention.
+## Development setup
 
-**Current support:** Full autonomous trading on Solana. **Coming soon:** Coinbase and additional exchanges.
-
----
-
-## Overview
-
-AutoHedge is built to be the world's most powerful autonomous agent hedge fund. It runs continuous analysis, generates and validates trading theses, sizes risk, and executes orders across supported venues. The system is designed for institutional reliability: structured outputs, comprehensive logging, and a risk-first architecture that scales from single strategies to multi-venue, multi-asset deployment.
-
----
-
-## Features
-
-- **Multi-Agent Architecture**: Specialized agents for each stage of the trading pipeline
-  - Director Agent: strategy and thesis generation
-  - Quant Agent: technical and statistical analysis
-  - Risk Management Agent: position sizing and risk assessment
-  - Execution Agent: order generation and execution
-
-- **Real-Time Market Analysis**: Integration with live market data for analysis and execution
-- **Risk-First Design**: Built-in risk management and position sizing before any execution
-- **Structured Output**: JSON-formatted recommendations and analysis for downstream systems
-- **Enterprise Logging**: Detailed, configurable logging for audit and debugging
-- **Extensible Framework**: Modular design for custom strategies and new venues
-
----
-
-## Supported Venues
-
-| Venue      | Status        | Notes                    |
-|-----------|----------------|--------------------------|
-| Solana    | Supported      | Full autonomous trading  |
-| Coinbase  | Coming soon    | In development           |
-| Other CEX | Roadmap        | Planned expansion        |
-
----
-
-## Quick Start
-
-### Installation
+Python 3.10+ is supported by the manifest. CI is configured for Python 3.10,
+3.11 and 3.12; Python 3.12 is the development baseline. Install
+[uv](https://docs.astral.sh/uv/) and run from the repository root:
 
 ```bash
-pip install -U autohedge
+uv sync --locked --python 3.12
+uv run --locked autohedge --help
 ```
 
-### Environment Variables
+`pyproject.toml` is the dependency source; `uv.lock` records exact resolutions
+and artifact hashes. The locked development toolchain uses uv 0.12.23.
+For a conventional pip installation, `python -m pip install -e .` also works,
+but it does not reproduce the lockfile. `requirements.txt` delegates to the same
+manifest rather than maintaining a second dependency list.
+
+Copy `.env.example` to an untracked `.env` and provide `OPENAI_API_KEY` and
+`EXA_API_KEY` for research requests. Keys are not needed for help, version,
+offline tests or runtime smoke tests. Do not commit secrets.
 
 ```bash
-# Jupiter API (token price & search tools)
-# Get a key at https://portal.jup.ag
-JUPITER_API_KEY=
-
-# OpenAI (experimental agents)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-WORKSPACE_DIR="agent_workspace"
-
-# Trading
-WALLET_PRIVATE_KEY=""
+uv run --locked autohedge
 ```
 
-See `.env.example` for a full reference.
+Enter a research task, `help`, or `quit`. Leave `SOLANA_PRIVATE_KEY` empty.
+Standalone Jupiter and Massive helpers have their own optional API-key
+requirements documented in `.env.example`.
 
-### Basic Usage
+## Checks
 
-```python
-autohedge 
+```bash
+python -m unittest discover -s tests -v
+SWARMS_TELEMETRY_ON=false uv run --locked python -m unittest discover -s tests/unit -v
+uv run --locked python -m unittest discover -s tests/integration -v
+uv run --locked ruff check autohedge tests scripts example.py
+uv run --locked ruff format --check autohedge tests scripts example.py
+uv build --no-sources
+uv run --locked python scripts/check_wheel.py dist/autohedge-0.1.5-py3-none-any.whl
 ```
 
----
+The first suite requires only the standard library. Unit tests use installed
+Pydantic and role fakes, covering settings, redaction, data validation and failure
+paths. Runtime smoke tests use
+actual installed packages and prohibit outbound socket connections. The wheel
+check creates a fresh environment with locked dependencies and verifies package
+imports and CLI entry points outside the checkout. These checks do not measure
+trading performance or prove compatibility with remote APIs.
 
-## Architecture
+`AutoHedge.run_report()` returns a validated report with a unique run ID, UTC
+timestamps, all five stages and explicit missing-data warnings. Reports always
+have `execution_enabled=false`; BUY/SELL/HOLD schemas exist but agent-generated
+trading signals, risk approval and execution are not yet implemented. Settings
+are loaded from the nearest working-directory `.env` and the process environment
+without mutating the latter. Process values take precedence.
 
-AutoHedge uses a multi-agent pipeline where each agent has a defined responsibility:
+See [DEVELOPMENT.md](DEVELOPMENT.md) for dependency maintenance, scope and safety
+boundaries. Historical scripts under `experimental/` are separate prototypes,
+not supported trading entry points, and are excluded from the active lint scope.
 
-```mermaid
-graph TD
-    A[Director Agent] --> B[Quant Agent]
-    B --> C[Risk Manager]
-    C --> D[Execution Agent]
-    D --> E[Trade Output]
-```
+## Roadmap
 
----
+1. Stabilize lifecycle, configuration, dependencies, CI and orchestration.
+2. Normalize real market data and calculate indicators in Python.
+3. Produce validated BUY, SELL and HOLD proposals with supporting evidence.
+4. Enforce deterministic portfolio limits, liquidity checks and a kill-switch.
+5. Validate realistic backtesting and paper trading.
+6. Add recoverable operation and separately authorized live execution.
 
-## Contributing
+Live trading must remain disabled by default. Any future activation requires
+explicit operator approval and a separate wallet with limited capital.
 
-Contributions are welcome. See [Contributing Guidelines](CONTRIBUTING.md) for details.
+## License and origins
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-- [Swarms](https://swarms.ai) for the AI agent framework
-
----
-
-## Support
-
-- Issue Tracker: [GitHub Issues](https://github.com/The-Swarm-Corporation/AutoHedge/issues)
-- Community: [Discord](https://swarms.ai)
-
----
-
-AutoHedge by [The Swarm Corporation](https://github.com/The-Swarm-Corporation)
+MIT. This fork builds on [The Swarm Corporation's AutoHedge](https://github.com/The-Swarm-Corporation/AutoHedge)
+and preserves its existing components where useful.

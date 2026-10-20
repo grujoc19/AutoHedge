@@ -5,11 +5,11 @@ API docs: https://dev.jup.ag (see /ultra/v1).
 
 import base64
 import json
-import os
-from typing import Any, Dict
+from typing import Dict
 
-import httpx
-from loguru import logger
+from autohedge.config import load_settings
+from autohedge.errors import ConfigurationError
+from autohedge.providers import request_json
 from solders.keypair import Keypair
 from solders.message import to_bytes_versioned
 from solders.transaction import VersionedTransaction
@@ -29,11 +29,7 @@ def _headers() -> Dict[str, str]:
     Dict[str, str]
         HTTP headers to authenticate with Jupiter APIs.
     """
-    headers = {}
-    key = os.getenv("JUPITER_API_KEY")
-    if key:
-        headers["x-api-key"] = key
-    return headers
+    return load_settings().headers("jupiter")
 
 
 def _get_keypair() -> Keypair:
@@ -54,17 +50,14 @@ def _get_keypair() -> Keypair:
     ValueError
         If SOLANA_PRIVATE_KEY is missing or invalid.
     """
-    raw = os.getenv("SOLANA_PRIVATE_KEY")
+    secret = load_settings().solana_private_key
+    raw = secret.get_secret_value() if secret else None
     if not raw or not raw.strip():
-        raise ValueError(
-            "SOLANA_PRIVATE_KEY is required in .env to sign transactions"
-        )
+        raise ValueError("SOLANA_PRIVATE_KEY is required in .env to sign transactions")
     try:
         return Keypair.from_base58_string(raw.strip())
-    except Exception as e:
-        raise ValueError(
-            f"Invalid SOLANA_PRIVATE_KEY in .env: {e}"
-        ) from e
+    except Exception:
+        raise ConfigurationError("Invalid SOLANA_PRIVATE_KEY") from None
 
 
 def _get_wallet_pubkey() -> str:
@@ -114,7 +107,7 @@ def get_order(input_mint: str, output_mint: str, amount: str) -> str:
     ------
     ValueError
         If input_mint, output_mint, or amount is empty, or SOLANA_PRIVATE_KEY is missing.
-    httpx.HTTPError
+    autohedge.errors.ProviderError
         On HTTP/network errors.
 
     Examples
@@ -139,20 +132,17 @@ def get_order(input_mint: str, output_mint: str, amount: str) -> str:
         "payer": wallet_pubkey,
     }
 
-    url = f"{JUPITER_ULTRA_BASE}/order"
-
-    try:
-        with httpx.Client(timeout=15) as client:
-            resp = client.get(
-                url,
-                params=params,
-                headers=_headers() or None,
-            )
-            resp.raise_for_status()
-            return json.dumps(resp.json())
-    except httpx.HTTPError as e:
-        logger.error(f"Jupiter Ultra order request failed: {e}")
-        raise
+    settings = load_settings()
+    return json.dumps(
+        request_json(
+            "jupiter",
+            "GET",
+            str(settings.jupiter_base_url).rstrip("/") + "/ultra/v1/order",
+            settings=settings,
+            params=params,
+            headers=settings.headers("jupiter"),
+        )
+    )
 
 
 def execute_trade(unsigned_transaction: str, request_id: str) -> str:
@@ -182,7 +172,7 @@ def execute_trade(unsigned_transaction: str, request_id: str) -> str:
     ------
     ValueError
         If unsigned_transaction or request_id is empty, or SOLANA_PRIVATE_KEY is missing/invalid.
-    httpx.HTTPError
+    autohedge.errors.ProviderError
         On HTTP/network errors.
 
     Examples
@@ -200,9 +190,7 @@ def execute_trade(unsigned_transaction: str, request_id: str) -> str:
     try:
         tx_bytes = base64.b64decode(tx_b64)
     except Exception as e:
-        raise ValueError(
-            f"unsigned_transaction is not valid base64: {e}"
-        ) from e
+        raise ValueError(f"unsigned_transaction is not valid base64: {e}") from e
 
     try:
         raw_tx = VersionedTransaction.from_bytes(tx_bytes)
@@ -213,29 +201,20 @@ def execute_trade(unsigned_transaction: str, request_id: str) -> str:
 
     message_bytes = to_bytes_versioned(raw_tx.message)
     signature = keypair.sign_message(message_bytes)
-    signed_tx = VersionedTransaction.populate(
-        raw_tx.message, [signature]
-    )
+    signed_tx = VersionedTransaction.populate(raw_tx.message, [signature])
     signed_b64 = base64.b64encode(bytes(signed_tx)).decode("ascii")
 
-    url = f"{JUPITER_ULTRA_BASE}/execute"
-    payload: Dict[str, Any] = {
-        "signedTransaction": signed_b64,
-        "requestId": request_id.strip(),
-    }
-
-    try:
-        with httpx.Client(timeout=30) as client:
-            resp = client.post(
-                url,
-                json=payload,
-                headers=_headers() or None,
-            )
-            resp.raise_for_status()
-            return json.dumps(resp.json())
-    except httpx.HTTPError as e:
-        logger.error(f"Jupiter Ultra execute request failed: {e}")
-        raise
+    settings = load_settings()
+    return json.dumps(
+        request_json(
+            "jupiter",
+            "POST",
+            str(settings.jupiter_base_url).rstrip("/") + "/ultra/v1/execute",
+            settings=settings,
+            headers=settings.headers("jupiter"),
+            json={"signedTransaction": signed_b64, "requestId": request_id.strip()},
+        )
+    )
 
 
 def get_holdings(address: str) -> str:
@@ -260,7 +239,7 @@ def get_holdings(address: str) -> str:
     ------
     ValueError
         If address is empty.
-    httpx.HTTPError
+    autohedge.errors.ProviderError
         On HTTP/network errors.
 
     Examples
@@ -270,13 +249,14 @@ def get_holdings(address: str) -> str:
     if not address or not address.strip():
         raise ValueError("address is required")
 
-    url = f"{JUPITER_ULTRA_BASE}/holdings/{address.strip()}"
-
-    try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(url, headers=_headers() or None)
-            resp.raise_for_status()
-            return json.dumps(resp.json())
-    except httpx.HTTPError as e:
-        logger.error(f"Jupiter Ultra holdings request failed: {e}")
-        raise
+    settings = load_settings()
+    return json.dumps(
+        request_json(
+            "jupiter",
+            "GET",
+            str(settings.jupiter_base_url).rstrip("/")
+            + f"/ultra/v1/holdings/{address.strip()}",
+            settings=settings,
+            headers=settings.headers("jupiter"),
+        )
+    )

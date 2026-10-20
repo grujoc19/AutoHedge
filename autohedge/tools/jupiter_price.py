@@ -4,11 +4,12 @@ API docs: https://dev.jup.ag (see /price/v3).
 """
 
 import json
-import os
 from typing import List, Union
 
-import httpx
 from loguru import logger
+
+from autohedge.config import load_settings
+from autohedge.providers import request_json
 
 JUPITER_PRICE_BASE = "https://api.jup.ag"
 
@@ -36,7 +37,7 @@ def get_token_price(
 
     Raises
     ------
-    httpx.HTTPError
+    autohedge.errors.ProviderError
         On HTTP/network errors.
 
     Examples
@@ -53,22 +54,13 @@ def get_token_price(
         logger.warning("get_token_price: ids is empty")
         return "{}"
 
-    url = f"{JUPITER_PRICE_BASE}/price/v3"
-    params = {"ids": ids_param}
-    headers = {}
-
-    key = os.getenv("JUPITER_API_KEY")
-
-    if key:
-        headers["x-api-key"] = key
-
-    try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(
-                url, params=params, headers=headers or None
-            )
-            resp.raise_for_status()
-            return json.dumps(resp.json())
-    except httpx.HTTPError as e:
-        logger.error(f"Jupiter price API request failed: {e}")
-        raise
+    settings = load_settings()
+    result = request_json(
+        "jupiter",
+        "GET",
+        str(settings.jupiter_base_url).rstrip("/") + "/price/v3",
+        settings=settings,
+        params={"ids": ids_param},
+        headers=settings.headers("jupiter"),
+    )
+    return json.dumps(result)

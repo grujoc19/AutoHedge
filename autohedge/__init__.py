@@ -1,7 +1,16 @@
-from autohedge.env_loader import load_env
+"""Public API; importing the package does not initialize the research runtime."""
 
-load_env()
+from typing import TYPE_CHECKING
 
-from autohedge.main import AutoHedge
+if TYPE_CHECKING:
+    from autohedge.main import AutoHedge
 
 __all__ = ["AutoHedge"]
+
+
+def __getattr__(name: str):
+    if name == "AutoHedge":
+        from autohedge.main import AutoHedge
+
+        return AutoHedge
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

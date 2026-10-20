@@ -1,23 +1,21 @@
-from autohedge.tools.polygon_api import (
-    get_ticker_overview,
-    get_balance_sheets,
-    get_daily_ticker_summary,
-)
-from autohedge.tools.jupiter_search import search_tokens
-from autohedge.tools.jupiter_price import get_token_price
-from autohedge.tools.ultra_tools import (
-    execute_trade,
-    get_order,
-    get_holdings,
-)
+"""Lazy public tool exports; research imports never load wallet-signing helpers."""
 
-__all__ = [
-    "get_ticker_overview",
-    "get_balance_sheets",
-    "get_daily_ticker_summary",
-    "search_tokens",
-    "get_token_price",
-    "execute_trade",
-    "get_order",
-    "get_holdings",
-]
+from importlib import import_module
+
+_EXPORTS = {
+    "get_ticker_overview": "polygon_api",
+    "get_balance_sheets": "polygon_api",
+    "get_daily_ticker_summary": "polygon_api",
+    "search_tokens": "jupiter_search",
+    "get_token_price": "jupiter_price",
+    "execute_trade": "ultra_tools",
+    "get_order": "ultra_tools",
+    "get_holdings": "ultra_tools",
+}
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name):
+    if name in _EXPORTS:
+        return getattr(import_module(f"{__name__}.{_EXPORTS[name]}"), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

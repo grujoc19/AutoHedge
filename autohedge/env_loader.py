@@ -23,10 +23,8 @@ def load_env() -> None:
     env_path = find_project_env()
     if env_path:
         load_dotenv(env_path, override=False)
-    else:
-        load_dotenv()
 
 
 def require_openai_key() -> bool:
     """Return True if OPENAI_API_KEY is set (required for swarms gpt-4.x)."""
-    return bool(os.getenv("OPENAI_API_KEY"))
+    return bool(os.getenv("OPENAI_API_KEY") or os.getenv("AUTOHEDGE_OPENAI_API_KEY"))

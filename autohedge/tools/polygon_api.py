@@ -5,46 +5,30 @@ POLYGON_BASE_URL in .env.
 """
 
 import json
-import os
 from typing import Any, Optional
 
-import httpx
 from loguru import logger
+
+from autohedge.config import load_settings
+from autohedge.providers import request_json
 
 DEFAULT_BASE_URL = "https://api.massive.com"
 
 
-def _get_headers() -> dict[str, str]:
-    headers: dict[str, str] = {}
-    key = os.getenv("MASSIVE_API_KEY")
-    if key:
-        headers["Authorization"] = f"Bearer {key}"
-    return headers
+def _get(path: str, *, params: Optional[dict[str, Any]] = None) -> str:
+    settings = load_settings()
+    result = request_json(
+        "massive",
+        "GET",
+        str(settings.massive_base_url).rstrip("/") + path,
+        settings=settings,
+        params=params,
+        headers=settings.headers("massive"),
+    )
+    return json.dumps(result)
 
 
-def _get(
-    path: str,
-    *,
-    params: Optional[dict[str, Any]] = None,
-) -> str:
-    url = f"{DEFAULT_BASE_URL.rstrip('/')}{path}"
-    try:
-        with httpx.Client(timeout=15) as client:
-            resp = client.get(
-                url,
-                params=params,
-                headers=_get_headers() or None,
-            )
-            resp.raise_for_status()
-            return json.dumps(resp.json())
-    except httpx.HTTPError as e:
-        logger.error(f"Polygon API request failed: {e}")
-        raise
-
-
-def get_ticker_overview(
-    ticker: str, date: Optional[str] = None
-) -> str:
+def get_ticker_overview(ticker: str, date: Optional[str] = None) -> str:
     """
     Get comprehensive details for a single ticker (company fundamentals, exchange,
     identifiers, market cap, branding, etc.).
@@ -144,9 +128,7 @@ def get_balance_sheets(
         params["limit"] = limit
     if sort is not None:
         params["sort"] = sort
-    return _get(
-        "/stocks/financials/v1/balance-sheets", params=params or None
-    )
+    return _get("/stocks/financials/v1/balance-sheets", params=params or None)
 
 
 def get_daily_ticker_summary(
@@ -175,9 +157,7 @@ def get_daily_ticker_summary(
         preMarket, symbol, from, status).
     """
     if not stocks_ticker or not stocks_ticker.strip():
-        logger.warning(
-            "get_daily_ticker_summary: stocks_ticker is empty"
-        )
+        logger.warning("get_daily_ticker_summary: stocks_ticker is empty")
         return "{}"
     if not date or not date.strip():
         logger.warning("get_daily_ticker_summary: date is empty")

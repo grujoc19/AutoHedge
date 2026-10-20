@@ -12,20 +12,14 @@ from rich.text import Text
 from rich.columns import Columns
 from rich import box
 
-from autohedge.env_loader import load_env, require_openai_key
-
-load_env()
-if not require_openai_key():
-    Console().print(
-        "[yellow]Warning: OPENAI_API_KEY not set. Set it in .env or export it.[/]"
-    )
+from autohedge.errors import AutoHedgeError
 
 try:
     from importlib.metadata import version as _version
 
     VERSION = _version("autohedge")
 except Exception:
-    VERSION = "0.1.2"
+    VERSION = "unknown"
 
 console = Console()
 
@@ -53,9 +47,7 @@ def _get_recent_tasks() -> list[str]:
         return []
     try:
         lines = RECENT_FILE.read_text().strip().splitlines()
-        return [
-            ln.strip() for ln in lines[-MAX_RECENT:] if ln.strip()
-        ]
+        return [ln.strip() for ln in lines[-MAX_RECENT:] if ln.strip()]
     except Exception:
         return []
 
@@ -86,9 +78,7 @@ def _welcome() -> None:
         style="dim",
     )
 
-    tips_text = Text(
-        "Tips for getting started\n", style="bold orange1"
-    )
+    tips_text = Text("Tips for getting started\n", style="bold orange1")
     tips_text.append(" — ".join(TIPS), style="dim")
 
     recent = _get_recent_tasks()
@@ -127,9 +117,7 @@ def _welcome() -> None:
         border_style="dim",
         expand=True,
     )
-    cols = Columns(
-        [left_panel, right_panel], expand=True, equal=False
-    )
+    cols = Columns([left_panel, right_panel], expand=True, equal=False)
     console.print(
         Panel(
             cols,
@@ -142,6 +130,15 @@ def _welcome() -> None:
 
 
 def run_repl() -> None:
+    from autohedge.config import load_settings
+    from autohedge.logging import configure_logging
+
+    settings = load_settings()
+    configure_logging(settings)
+    if not settings.openai_api_key:
+        console.print(
+            "[yellow]Warning: OPENAI_API_KEY not set. Set it in .env or export it.[/]"
+        )
     _welcome()
 
     while True:
@@ -172,18 +169,25 @@ def run_repl() -> None:
         try:
             from autohedge import AutoHedge
 
-            system = AutoHedge()
+            system = AutoHedge(settings=settings)
             console.print("[dim]Running...[/]")
-            result = system.run(task=task)
+            result = system.run_report(task=task)
             console.print(
                 Panel(
-                    str(result)[:2000],
+                    result.stages[-1].content,
                     title="Result",
                     border_style="green",
                 )
             )
-        except Exception as e:
+            for warning in result.warnings:
+                console.print(Text(warning, style="yellow"))
+            console.print(Text(f"Run ID: {result.run_id}", style="dim"))
+        except AutoHedgeError as e:
             console.print(f"[red]Error: {e}[/]")
+        except Exception as e:
+            console.print(
+                f"[red]Research failed ({type(e).__name__}); no completed report.[/]"
+            )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -222,7 +226,11 @@ def main() -> None:
         parser.print_help()
         sys.exit(0)
     parser.parse_args()  # exits on --help / --version
-    run_repl()
+    try:
+        run_repl()
+    except AutoHedgeError as error:
+        console.print(f"[red]Error: {error}[/]")
+        sys.exit(2)
     sys.exit(0)
 
 
