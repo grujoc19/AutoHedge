@@ -5,7 +5,13 @@ import os
 import tempfile
 
 from autohedge.config import Settings, load_settings
-from autohedge.domain import MarketSnapshot, PortfolioSnapshot, ResearchRequest
+from autohedge.domain import (
+    Instrument,
+    MarketSnapshot,
+    PortfolioSnapshot,
+    ResearchRequest,
+)
+from autohedge.data.contracts import MarketData
 from autohedge.errors import ConfigurationError
 from autohedge.logging import configure_logging
 from autohedge.orchestration import ResearchOrchestrator, utc_now
@@ -50,7 +56,11 @@ class AutoHedge:
 
             return build_agent_team(now, settings=self.settings)
 
-        options = {"clock": clock, "timeout": self.settings.cycle_timeout}
+        options = {
+            "clock": clock,
+            "timeout": self.settings.cycle_timeout,
+            "quality_policy": self.settings.market_quality,
+        }
         if monotonic is not None:
             options["monotonic"] = monotonic
         self.orchestrator = ResearchOrchestrator(
@@ -63,11 +73,19 @@ class AutoHedge:
         *,
         market: MarketSnapshot | None = None,
         portfolio: PortfolioSnapshot | None = None,
+        instrument: Instrument | None = None,
+        market_data: MarketData | None = None,
     ):
         """Return a validated, non-executable report; failures leave no completed report."""
         self.last_report = None
         self.conversation = self._conversation_type(time_enabled=True)
-        request = ResearchRequest(task=task, market=market, portfolio=portfolio)
+        request = ResearchRequest(
+            task=task,
+            market=market,
+            portfolio=portfolio,
+            instrument=instrument,
+            market_data=market_data,
+        )
         report = self.orchestrator.run(request)
         # Conversation is a presentation of this cycle, never another agent's memory.
         self.conversation.add(role="user", content=request.task)
@@ -100,8 +118,16 @@ class AutoHedge:
         *,
         market: MarketSnapshot | None = None,
         portfolio: PortfolioSnapshot | None = None,
+        instrument: Instrument | None = None,
+        market_data: MarketData | None = None,
     ):
-        report = self.run_report(task, market=market, portfolio=portfolio)
+        report = self.run_report(
+            task,
+            market=market,
+            portfolio=portfolio,
+            instrument=instrument,
+            market_data=market_data,
+        )
         if self.output_type == "dict":
             return report.model_dump(mode="json")
         if self.output_type == "str":

@@ -12,6 +12,8 @@ from pydantic import ValidationError
 
 from autohedge.domain import ResearchReport, ResearchRequest, Stage, StageResult
 from autohedge.errors import AutoHedgeError, ResearchError
+from autohedge.data.contracts import QualityPolicy
+from autohedge.data.quality import validate_market_data, validate_price_time
 
 
 class ResearchAgent(Protocol):
@@ -40,12 +42,16 @@ class ResearchOrchestrator:
         clock=utc_now,
         monotonic=time.monotonic,
         max_prompt_chars: int = 32_000,
+        quality_policy: QualityPolicy | None = None,
     ):
         self.team_factory = team_factory
         self.timeout = timeout
         self.clock = clock
         self.monotonic = monotonic
         self.max_prompt_chars = max_prompt_chars
+        self.quality_policy = (
+            quality_policy if quality_policy is not None else QualityPolicy()
+        )
 
     def run(self, request: ResearchRequest) -> ResearchReport:
         run_id = uuid4()
@@ -59,9 +65,26 @@ class ResearchOrchestrator:
             completed_at=start,
         )
         results = []
+        quality = None
+
+        def check_market(at):
+            if request.market_data is not None:
+                return validate_market_data(
+                    request.market_data,
+                    expected=request.instrument,
+                    now=at,
+                    policy=self.quality_policy,
+                )
+            if request.market is not None:
+                validate_price_time(
+                    request.market.observed_at, now=at, policy=self.quality_policy
+                )
+            return None
+
         with logger.contextualize(run_id=str(run_id)):
             logger.info("Research cycle started")
             try:
+                quality = check_market(start)
                 try:
                     team = self.team_factory(start)
                 except AutoHedgeError:
@@ -81,6 +104,7 @@ class ResearchOrchestrator:
                     with logger.contextualize(stage=stage.value):
                         if self.monotonic() >= deadline:
                             raise ResearchError(stage.value, "cycle deadline exceeded")
+                        quality = check_market(self.clock())
                         inputs = {
                             "stage": stage.value,
                             "request": request.model_dump(mode="json"),
@@ -112,6 +136,7 @@ class ResearchOrchestrator:
                             raise ResearchError(stage.value, "required provider failed")
                         if self.monotonic() >= deadline:
                             raise ResearchError(stage.value, "cycle deadline exceeded")
+                        quality = check_market(self.clock())
                         try:
                             result = StageResult(
                                 stage=stage,
@@ -126,9 +151,17 @@ class ResearchOrchestrator:
                         results.append(result)
                         logger.info("Stage completed")
                 warnings = ["Research only; no risk approval or order execution."]
-                if request.market is None:
+                if request.market is None and request.market_data is None:
                     warnings.append(
                         "No validated market snapshot supplied; numerical claims are unverified."
+                    )
+                elif request.market is not None:
+                    warnings.append(
+                        "Legacy price-only snapshot; OHLCV quality has not been checked."
+                    )
+                if request.market_data is not None and not request.market_data.news:
+                    warnings.append(
+                        "No timestamped news supplied in the market-data bundle."
                     )
                 if request.portfolio is None:
                     warnings.append(
@@ -141,6 +174,7 @@ class ResearchOrchestrator:
                     completed_at=self.clock(),
                     stages=tuple(results),
                     warnings=tuple(warnings),
+                    market_quality=quality,
                 )
                 logger.info("Research cycle completed")
                 return report

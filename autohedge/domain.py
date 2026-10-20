@@ -1,44 +1,15 @@
 """Validated contracts; a research report never authorizes order execution."""
 
-from datetime import datetime, timezone
-from decimal import Decimal
 from enum import Enum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field
-from pydantic import field_validator, model_validator
+from pydantic import AwareDatetime, BeforeValidator, Field, model_validator
 
-
-def reject_bool(value):
-    if isinstance(value, bool):
-        raise ValueError("Boolean values are not numeric quantities")
-    return value
-
-
-PositiveAmount = Annotated[
-    Decimal, BeforeValidator(reject_bool), Field(gt=0, allow_inf_nan=False)
-]
-Amount = Annotated[
-    Decimal, BeforeValidator(reject_bool), Field(ge=0, allow_inf_nan=False)
-]
-Text = Annotated[str, Field(min_length=1, max_length=20_000)]
-
-
-class Contract(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
-
-    @field_validator("*", mode="after")
-    @classmethod
-    def utc_timestamps(cls, value):
-        return value.astimezone(timezone.utc) if isinstance(value, datetime) else value
-
-
-class Instrument(Contract):
-    asset_id: Text
-    symbol: Text
-    venue: Text
-    quote_currency: Text
+from autohedge.contracts import Amount as Amount, PositiveAmount as PositiveAmount
+from autohedge.contracts import Contract as Contract, Instrument as Instrument
+from autohedge.contracts import Text as Text, reject_bool as reject_bool
+from autohedge.data.contracts import MarketData, QualityAssessment
 
 
 class MarketSnapshot(Contract):
@@ -96,6 +67,25 @@ class ResearchRequest(Contract):
     task: Annotated[str, Field(min_length=1, max_length=10_000)]
     market: MarketSnapshot | None = None
     portfolio: PortfolioSnapshot | None = None
+    instrument: Instrument | None = None
+    market_data: MarketData | None = None
+
+    @model_validator(mode="after")
+    def unambiguous_market_input(self):
+        if self.market_data is not None:
+            if self.instrument is None:
+                raise ValueError("An expected instrument is required with market_data")
+            if self.market is not None:
+                raise ValueError(
+                    "Supply market_data or a legacy market snapshot, not both"
+                )
+        if (
+            self.market is not None
+            and self.instrument is not None
+            and self.market.instrument != self.instrument
+        ):
+            raise ValueError("Legacy snapshot does not match the expected instrument")
+        return self
 
 
 class Stage(str, Enum):
@@ -127,9 +117,19 @@ class ResearchReport(Contract):
     stages: tuple[StageResult, ...]
     execution_enabled: Literal[False] = False
     warnings: tuple[str, ...] = ()
+    market_quality: QualityAssessment | None = None
 
     @model_validator(mode="after")
     def complete_pipeline(self):
+        if (self.request.market_data is None) != (self.market_quality is None):
+            raise ValueError("Market-data reports require a quality assessment")
+        if (
+            self.market_quality is not None
+            and not self.started_at
+            <= self.market_quality.checked_at
+            <= self.completed_at
+        ):
+            raise ValueError("Market quality was checked outside this research cycle")
         if tuple(stage.stage for stage in self.stages) != tuple(Stage):
             raise ValueError("Research report requires all stages in order")
         if self.completed_at < self.started_at:

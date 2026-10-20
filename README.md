@@ -60,14 +60,20 @@ imports and CLI entry points outside the checkout. These checks do not measure
 trading performance or prove compatibility with remote APIs.
 
 `AutoHedge.run_report()` returns a validated report with a unique run ID, UTC
-timestamps, all five stages and explicit missing-data warnings. Reports always
+timestamps, all five stages and explicit missing-data warnings. Supplied
+`market_data` bundles are now checked before team construction and before/after
+every stage; stale, inconsistent or incomplete data stops research. Reports always
 have `execution_enabled=false`; BUY/SELL/HOLD schemas exist but agent-generated
 trading signals, risk approval and execution are not yet implemented. Settings
 are loaded from the nearest working-directory `.env` and the process environment
 without mutating the latter. Process values take precedence.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for dependency maintenance, scope and safety
-boundaries. Historical scripts under `experimental/` are separate prototypes,
+boundaries. See [docs/MARKET_DATA.md](docs/MARKET_DATA.md) for the new provider-neutral
+quote/OHLCV/news contracts and data-quality policy. Automatic provider collection
+and indicator calculation are subsequent steps.
+
+Historical scripts under `experimental/` are separate prototypes,
 not supported trading entry points, and are excluded from the active lint scope.
 
 ## Roadmap

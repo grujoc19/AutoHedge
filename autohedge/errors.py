@@ -22,3 +22,9 @@ class ResearchError(AutoHedgeError):
     def __init__(self, stage: str, reason: str):
         self.stage = stage
         super().__init__(f"Research stopped at {stage}: {reason}")
+
+
+class DataQualityError(AutoHedgeError):
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(f"Market data rejected: {code}")

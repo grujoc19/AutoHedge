@@ -24,9 +24,9 @@ a subsequent cycle fails; consumers must check run_id and timestamps.
 Reports are research text, not executable signals. The domain includes validated
 Instrument, MarketSnapshot, PortfolioSnapshot, Signal and Rejection contracts.
 Amounts use finite nonnegative/positive Decimal values; timestamps must be
-aware and normalize to UTC. Signal proposals have no execution quantity. No
-automatic market feeds, indicators, freshness checks, risk approval or trading
-have been added. Missing inputs are identified in report warnings.
+aware and normalize to UTC. Signal proposals have no execution quantity. Freshness/consistency gates now apply to supplied market-data bundles, and
+legacy price-only inputs are checked for stale/future observation times. No
+automatic market feeds, indicators, risk approval or trading have been added. Missing inputs are identified in report warnings.
 
 ## Installation and dependency updates
 
@@ -156,3 +156,32 @@ agent requires external process supervision in the later runtime phase.
 
 Installation, local smoke tests and green CI do not establish market quality,
 remote API readiness, profitable performance or authorization to trade.
+
+## Phase 2.1: supplied market-data validation
+
+The shared value types were extracted into `autohedge.contracts`; imports such
+as `from autohedge.domain import Instrument` remain compatible. Domain contracts
+revalidate model instances, so nonvalidating model_copy updates are not accepted
+at validated boundaries.
+
+`autohedge.data` adds Quote, Candle, CandleSeries, NewsArticle, MarketData,
+CandleRequest, QualityPolicy and QualityAssessment, plus provider Protocols.
+Pass an explicit expected Instrument together with market_data to run/run_report.
+A request cannot combine a legacy market snapshot and a normalized bundle.
+Structural validation rejects inconsistent OHLCV, mixed assets/currencies,
+non-finite/unbounded numbers, duplicate/gapped/unsorted bars, partial candles,
+invalid publication/receipt ordering and duplicate news. There is no sorting,
+interpolation, unit guessing, currency conversion or fake-price fallback.
+
+The runtime quality gate checks data at the injected UTC clock before creating
+agents and before/after every role call. A bundle that becomes stale during a
+call aborts the cycle rather than proceeding. Successful reports record the
+actual quality policy, check time, quote age, last candle close, counts and price
+deviation. This is data validation, not risk approval or proof that a provider's
+reported values are true. Raw Exa tool results are not part of that assessment;
+the later news adapter must normalize them into timestamped contracts.
+
+Configure a per-application policy through
+`Settings(market_quality=QualityPolicy(...))`. Defaults and units, the new Python
+API and explicit limitations are documented in [docs/MARKET_DATA.md](docs/MARKET_DATA.md).
+No API credentials or live endpoints are needed by the added contract/gate tests.

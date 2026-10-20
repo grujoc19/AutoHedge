@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, Validatio
 from pydantic import field_validator
 
 from autohedge.errors import ConfigurationError
+from autohedge.data.contracts import QualityPolicy
 
 
 class Settings(BaseModel):
@@ -29,6 +30,7 @@ class Settings(BaseModel):
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
     jupiter_base_url: HttpUrl = HttpUrl("https://api.jup.ag")
     massive_base_url: HttpUrl = HttpUrl("https://api.massive.com")
+    market_quality: QualityPolicy = Field(default_factory=QualityPolicy)
 
     @field_validator(
         "openai_api_key",
