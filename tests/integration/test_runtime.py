@@ -124,9 +124,8 @@ import os
 import sys
 from autohedge.ai import AgentRole, ModelMessage, ModelReply, ModelRequest, TokenUsage, complete_model
 from autohedge.config import load_settings
-from autohedge.errors import ConfigurationError
 before = dict(os.environ)
-environ = {}
+environ = {'AUTOHEDGE_SEARCH_ENABLED': 'false'}
 for role in AgentRole:
     prefix = 'AUTOHEDGE_' + role.value.upper() + '_'
     environ[prefix + 'PROVIDER'] = 'ollama'
@@ -157,12 +156,7 @@ for role in AgentRole:
     result = complete_model(provider, request)
     assert result.reply.target.model == 'fixture-' + role.value
 assert provider.calls == 6
-try:
-    settings.require_research_credentials()
-except ConfigurationError as error:
-    assert 'not implemented' in str(error)
-else:
-    raise AssertionError('Legacy research must not ignore role profiles')
+settings.require_research_credentials()
 assert dict(os.environ) == before
 for module in ('swarms', 'litellm', 'openai', 'anthropic', 'solders'):
     assert module not in sys.modules, module
@@ -252,6 +246,120 @@ for status,reason in ((429,'stop'),(200,'length'),(200,'content_filter'),(200,'t
                     raise AssertionError('Rejected response must stop the research cycle')
                 assert engine.last_report is None
     assert len(requests)==1, len(requests)
+""")
+
+    def test_public_local_and_mixed_pipelines_use_exact_role_backends_and_audits(self):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime, timezone
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.ollama import OllamaProvider
+from autohedge.config import Settings
+now=datetime(2026,10,21,12,tzinfo=timezone.utc)
+roles=('trading_director','quant','news_intelligence','risk_manager')
+for mixed in (False, True):
+    profiles={role:{'target':{'provider':'openai' if mixed and role=='trading_director' else 'ollama',
+                'model':'model-'+role},'max_output_tokens':100+i,'timeout_seconds':7+i}
+              for i,role in enumerate(roles)}
+    settings=Settings(role_models=profiles,search_enabled=False,
+        openai_api_key='fixture-cloud' if mixed else None)
+    settings.require_research_credentials()
+    calls=[]
+    def respond(request):
+        body=json.loads(request.content)
+        calls.append((request,body))
+        assert not body.get('tools')
+        if request.url.host=='api.openai.com':
+            assert mixed
+            assert request.headers['authorization']=='Bearer fixture-cloud'
+            return httpx.Response(200,json={'model':body['model'],'choices':[{
+                'index':0,'finish_reason':'stop','message':{'role':'assistant','content':'offline cloud evidence'}}],
+                'usage':{'prompt_tokens':10,'completion_tokens':2}})
+        assert request.url.host=='127.0.0.1'
+        assert request.url.path=='/api/chat'
+        assert 'authorization' not in request.headers and 'x-api-key' not in request.headers
+        assert body['truncate'] is False and body['shift'] is False
+        return httpx.Response(200,json={'model':body['model']+':latest','done':True,'done_reason':'stop',
+            'message':{'role':'assistant','content':'offline local evidence'},'prompt_eval_count':10,'eval_count':2})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+                'autohedge.workers.OllamaProvider',side_effect=lambda settings:OllamaProvider(settings,client=client)):
+                engine=AutoHedge(settings=settings,output_dir=directory,clock=lambda:now)
+                report=engine.run_report('Frozen supplied evidence')
+    assert len(calls)==5
+    expected_roles=(roles[0],roles[1],roles[2],roles[3],roles[0])
+    assert [body['model'] for request,body in calls]==['model-'+role for role in expected_roles]
+    assert sum(request.url.host=='api.openai.com' for request,body in calls)==(2 if mixed else 0)
+    for stage,(request,body),role in zip(report.stages,calls,expected_roles):
+        audit,=stage.model_calls
+        config=settings.model_for(role)
+        assert audit.role.value==role and audit.target==config.target
+        assert audit.usage.total_tokens==12
+        assert audit.max_output_tokens==config.max_output_tokens
+        assert audit.timeout_seconds==config.timeout_seconds
+        assert request.extensions['timeout']['read']==config.timeout_seconds
+        limit=body['max_completion_tokens'] if config.target.provider=='openai' else body['options']['num_predict']
+        assert limit==config.max_output_tokens
+    assert len({stage.model_calls[0].request_id for stage in report.stages})==5
+    assert report.execution_enabled is False
+""")
+
+    def test_failed_local_quant_never_uses_cloud_fallback_or_finishes_report(self):
+        self.run_offline("""
+import json
+import tempfile
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.ollama import OllamaProvider
+from autohedge.config import Settings
+from autohedge.errors import ResearchError
+settings=Settings(openai_api_key='fixture-cloud',search_enabled=False,role_models={
+    'quant':{'target':{'provider':'ollama','model':'offline-quant'}}})
+for failure in ('timeout','unavailable','missing_model','bad_json','length','tool_calls','remote'):
+    calls=[]
+    def respond(request):
+        calls.append(request)
+        if request.url.host=='api.openai.com':
+            assert len(calls)==1, 'No Cloud fallback or downstream call is allowed'
+            return httpx.Response(200,json={'model':'fixture-director','choices':[{
+                'index':0,'finish_reason':'stop','message':{'role':'assistant','content':'offline thesis'}}]})
+        assert request.url.host=='127.0.0.1' and request.url.path=='/api/chat'
+        if failure=='timeout':
+            raise httpx.ReadTimeout('private-server-body')
+        if failure=='unavailable':
+            raise httpx.ConnectError('private-server-body')
+        if failure=='missing_model':
+            return httpx.Response(404,text='private-server-body')
+        if failure=='bad_json':
+            return httpx.Response(200,text='private-server-body')
+        raw={'model':'offline-quant','done':True,'done_reason':'length' if failure=='length' else 'stop',
+            'message':{'role':'assistant','content':'private-server-body'}}
+        if failure=='tool_calls':
+            raw['message']['tool_calls']=[{'function':{'name':'execute_trade'}}]
+        if failure=='remote':
+            raw['remote_host']='https://cloud.example'
+        return httpx.Response(200,json=raw)
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+                'autohedge.workers.OllamaProvider',side_effect=lambda settings:OllamaProvider(settings,client=client)):
+                engine=AutoHedge(settings=settings,output_dir=directory)
+                try:
+                    engine.run_report('offline research')
+                except ResearchError as error:
+                    assert error.stage=='quant'
+                    assert 'private-server-body' not in str(error)
+                else:
+                    raise AssertionError('Failed local model must stop the cycle')
+                assert engine.last_report is None
+    assert len(calls)==2, (failure,len(calls))
 """)
 
     def test_real_agents_conversation_and_tool_schemas(self):

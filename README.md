@@ -91,8 +91,8 @@ minutes-to-hours strategy horizon are recorded in
 [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md). News Intelligence,
 Market Anomaly, On-Chain Intelligence, Quant and an advisory Risk Manager will
 supply a Trading Director; a separate deterministic Risk Engine will control
-order eligibility. Event routing, structured role outputs and model routes are
-future work. The [user's goal definition](docs/PROJECT_GOAL.md) is preserved in
+order eligibility. Event routing, structured role outputs and budgeted escalation
+are future work. The [user's goal definition](docs/PROJECT_GOAL.md) is preserved in
 the repository; the [goal alignment and prioritized backlog](docs/GOAL_ALIGNMENT.md)
 record what fits, what needs adjustment, and what is missing.
 
@@ -102,10 +102,12 @@ known/partial/unknown token usage. Its call boundary performs no retries or
 fallbacks. Immutable [role profiles](docs/MODEL_CONFIGURATION.md) now configure
 provider, model and call limits for all six roles while preserving legacy defaults.
 Keys are checked only for the selected backend; local profiles need no cloud key.
-The [Swarms/OpenAI path](docs/OPENAI_RESEARCH.md) now uses these contracts and
-OpenAI role profiles, with five validated model calls and prompt-free call audits
-in each report. Unsupported backends are rejected before agent construction;
-Ollama and further cloud adapters are next.
+The [Swarms research path](docs/OPENAI_RESEARCH.md) uses these contracts with
+[OpenAI or Ollama per role](docs/OLLAMA_RESEARCH.md), five validated model calls
+and prompt-free call audits in each report. Fully local research needs no cloud
+key when all four active roles use Ollama and Exa search is disabled. Local
+failures stop the cycle without cloud fallback. Other backends are rejected
+before agent construction; Anthropic is next, followed by Gemini and DeepSeek.
 
 ## Roadmap
 

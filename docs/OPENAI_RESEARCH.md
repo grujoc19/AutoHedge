@@ -6,6 +6,10 @@ Orchestrator, Snapshot-Prüfungen und die frische Team-Factory bleiben erhalten.
 Der Modelltransport und die Begrenzung der Aufrufe gehören der Anwendung.
 Keine neuen Pakete oder zusätzlichen Modellaufrufe wurden eingeführt.
 
+Ergänzung G1.4: Derselbe Ablauf unterstützt inzwischen auch [Ollama je Rolle](OLLAMA_RESEARCH.md),
+einschließlich vollständig lokaler und gemischter Läufe. Dieser Text dokumentiert
+die gemeinsame Brücke und den OpenAI-Transport.
+
 ## Ablauf und Wiederverwendung
 
 ```text
@@ -116,4 +120,5 @@ Offline-Abnahme: HTTP-Fixtures für Payload/Auth/Timeout/Usage/Schema und Fehler
 echte Swarms-Zyklen mit gesperrten Sockets, ein vollständiger Standardlauf mit
 fünf gemockten OpenAI-POSTs und einem Exa-Abruf sowie frühe Abbrüche ohne Retry.
 Live-API-Zugang, reale Modellqualität und Abrechnungsgenauigkeit sind ungeprüft.
-Nächster Schritt ist **G1.4: Ollama-Adapter** mit denselben Modellverträgen.
+Der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md) ist inzwischen angebunden;
+nächster Schritt ist **G1.5a: Anthropic**.

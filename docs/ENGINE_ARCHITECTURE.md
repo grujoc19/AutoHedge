@@ -44,7 +44,8 @@ Credential-Auswahl; lokale Profile benötigen keinen OpenAI-Key.
 [G1.3](OPENAI_RESEARCH.md) verwendet OpenAI-Profile jetzt im bestehenden Swarms-
 Research, mit kontrolliertem HTTP-Transport, fünf Modellaufrufen und Stufen-Audit.
 Exa wird bei erlaubter Exploration vor Sentiment lesend abgerufen; die SDK-Agenten
-haben keine Tools. Ollama und weitere Cloud-Adapter fehlen noch; nicht unterstützte
+haben keine Tools. [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama je Rolle und gemischte
+Läufe ohne Cloud-Fallback. Weitere Cloud-Adapter fehlen noch; nicht unterstützte
 aktive Backends werden vor Agentenkonstruktion abgewiesen.
 
 ## Datenfluss und feste Ausführungsgrenze
@@ -219,7 +220,7 @@ Legacy-Referenzen und werden dort auf die sieben neuen Phasen abgebildet.
 
 | Zielphase | Nächste Aufgaben | Wiederverwendung |
 | --- | --- | --- |
-| G1 Foundation | Providervertrag, Rollenprofile und Swarms/OpenAI-Brücke umgesetzt; als Nächstes Ollama, danach weitere Cloud-Adapter | Settings, gemeinsame Fehler, Lifecycle-Tests |
+| G1 Foundation | Providervertrag, Rollenprofile, Swarms-Brücke und OpenAI-/Ollama-Adapter umgesetzt; als Nächstes Anthropic, danach Gemini und DeepSeek | Settings, gemeinsame Fehler, Lifecycle-Tests |
 | G2 Data Collection | Ereignisspeicher, RSS, Binance und DEX Screener, weitere Quellen einzeln | Datenverträge, HTTP-Transport, HistoryStore und Snapshot |
 | G3 Market Intelligence | Budgets/Cache, News-Klassifikation, statistische Anomalien, später lokale ML | Indikatoren, Sentiment-/Exa-Kern, Qualitätsregeln |
 | G4 On-Chain Intelligence | RPC/Helius, Ereignisklassifikation und Python-Muster | Solana-Identität, Zeit-/Evidenzverträge |

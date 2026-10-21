@@ -10,11 +10,15 @@ werden dafür geladen oder aufgerufen.
 **G1.3 ist inzwischen implementiert:** Der [Swarms/OpenAI-Pfad](OPENAI_RESEARCH.md)
 verwendet die Profile seiner vier aktiven Rollen, einschließlich Modell, Limits
 und Timeout. Ohne Profil bleiben die zwei alten Modellvariablen Fallbacks.
-Andere aktive Backends werden vor Agentenkonstruktion mit `ConfigurationError`
-abgewiesen; kein Profil wird ignoriert oder still durch OpenAI ersetzt. Ollama
-und weitere Cloud-Adapter folgen in G1.4/G1.5. OpenAI-Endpunkt:
+[G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama als echten Adapter und gemischte
+lokale/Cloud-Rollen. Andere aktive Backends werden vor Agentenkonstruktion mit
+`ConfigurationError` abgewiesen; kein Profil wird ignoriert oder still durch
+OpenAI ersetzt. Weitere Cloud-Adapter folgen in G1.5. OpenAI-Endpunkt:
 `AUTOHEDGE_OPENAI_BASE_URL`, Default `https://api.openai.com/v1`, nur HTTPS ohne
-eingebettete Credentials, Query oder Fragment.
+eingebettete Credentials, Query oder Fragment. Ollama-Endpunkt:
+`AUTOHEDGE_OLLAMA_BASE_URL`, Default `http://127.0.0.1:11434`, HTTP/HTTPS ohne
+eingebettete Credentials, Query oder Fragment. Native Ollama-Modellkennungen
+einschließlich Namespace und Tag bleiben unverändert.
 
 ## Rollen, Variablen und Defaults
 
@@ -56,7 +60,7 @@ Vertippte Rollenpräfixe mit diesen Suffixen sowie unbekannte Einstellungen unte
 einem bekannten Rollenpräfix werden abgelehnt, statt kostenpflichtige Defaults
 zu verwenden. Andere Umgebungsvariablen bleiben außerhalb dieser Konfiguration.
 
-Beispiel für ein lokales News-Profil (bis G1.4 nur über die Konfigurations-API nutzbar):
+Beispiel für ein lokales News-Profil im bestehenden Research:
 
 ```dotenv
 AUTOHEDGE_NEWS_INTELLIGENCE_PROVIDER=ollama
@@ -67,6 +71,9 @@ AUTOHEDGE_NEWS_INTELLIGENCE_TIMEOUT=20
 
 Die [`.env.example`](../.env.example) lässt alle neuen Rollenprofile auskommentiert,
 damit das bestehende Research weiter mit seinen bisherigen Variablen startet.
+Ein einzelnes lokales Profil ersetzt nur diese Rolle. Für Research ohne Cloud-Key
+alle vier aktiven Rollen auf Ollama setzen und zusätzliche Exa-Suche deaktivieren;
+ein vollständiges Beispiel und Serveranforderungen stehen in [G1.4](OLLAMA_RESEARCH.md).
 
 ## Priorität und unveränderte Legacy-Variablen
 
@@ -109,7 +116,7 @@ kanonischen `.env`-Wert. Leere/aus Leerzeichen bestehende Schlüssel werden zu
 sind aus Settings-Repr/Serialisierung ausgeschlossen und Teil der bestehenden
 Log-Redaction. Credentials gehören nicht in Rollenprofile oder Modellnamen.
 `Settings.headers()` bleibt ein Helfer für Datenprovider; Modelladapter verwenden
-die Modellschlüssel-API und ihre eigenen SDK-Verträge.
+ihre eigenen Transportverträge. Ollama erhält keinen Cloud-Schlüssel.
 
 Exa ist ein separater Datenanbieter. Lokale Modellkonfiguration verlangt keinen
 Exa-Key; der bisherige Research benötigt bei aktivierter Suche weiterhin Exa und
@@ -141,11 +148,12 @@ YAML-/JSON-Dateilader; `.env` und injizierte Settings sind die Konfigurationsweg
 
 Offline-Tests prüfen alle sechs Rollen und ihre Unabhängigkeit, alte Defaults,
 Präzedenz und leere Werte, Credential-Auswahl/Redaction, ungültige Kopien und
-frühe Legacy-Ablehnung. Ein Prozess mit gesperrtem Netzwerk und ohne Cloud-Keys
+frühe Ablehnung nicht implementierter Backends. Ein Prozess mit gesperrtem Netzwerk und ohne Cloud-Keys
 löst sechs lokale Profile auf und führt damit nur einen geskripteten Testadapter
 aus; Swarms und Modell-SDKs werden dabei nicht geladen. Der installierte Wheel
 wird zusätzlich außerhalb des Checkouts geprüft.
 
-Die [G1.3-Anbindung](OPENAI_RESEARCH.md) ist umgesetzt. Nächster Schritt:
-**G1.4**, Ollama als echten Adapter ergänzen; die lokalen Profile allein starten
-weiterhin kein Modell.
+Die [G1.3-Anbindung](OPENAI_RESEARCH.md) und der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md)
+sind umgesetzt. Zusätzliche echte Swarms-Zyklen mit HTTP-Fixtures prüfen lokale
+und gemischte Rollen sowie Fehler ohne Cloud-Fallback. Profile allein starten
+weiterhin kein Modell. Nächster Schritt: **G1.5a**, Anthropic.

@@ -93,6 +93,7 @@ from autohedge.config import Settings
 from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, complete_model
 from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
 from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.ollama import OllamaProvider
 from autohedge.ai.swarms import SwarmsModelBridge
 from autohedge.ai.audit import ModelCallAudit
 from autohedge.indicators import IndicatorConfig, calculate_indicators
@@ -119,6 +120,14 @@ from autohedge.workers import build_agent_team
 team = build_agent_team()
 assert team.director.agent is not team.quant.agent
 assert not team.director.agent.handoffs
+local_settings = Settings(search_enabled=False, role_models={
+    role: {"target": {"provider": "ollama", "model": "installed-local:7b"}}
+    for role in ("quant", "trading_director", "news_intelligence", "risk_manager")
+})
+local_settings.require_research_credentials()
+local_team = build_agent_team(settings=local_settings)
+for name in ("director", "quant", "sentiment", "risk"):
+    assert isinstance(getattr(local_team, name).bridge.provider, OllamaProvider)
 system = AutoHedge(output_dir='outputs')
 system.conversation.add(role='user', content='installed wheel check')
 assert 'installed wheel check' in str(system.conversation.return_messages_as_list())

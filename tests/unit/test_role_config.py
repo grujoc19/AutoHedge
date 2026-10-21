@@ -329,14 +329,15 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             Settings(anthropic_api_key=SecretStr("   ")).anthropic_api_key
         )
 
-    def test_active_overrides_are_rejected_by_legacy_research_even_with_valid_keys(
+    def test_unsupported_backends_are_rejected_even_with_valid_keys(
         self,
     ):
         for role in ("quant", "trading_director", "news_intelligence", "risk_manager"):
             settings = Settings(
                 openai_api_key="fixture-key",
                 exa_api_key="fixture-exa",
-                role_models={role: profile("ollama", "local")},
+                anthropic_api_key="fixture-anthropic",
+                role_models={role: profile("anthropic", "unsupported")},
             )
             settings.require_model_credentials(role)
             for configured in (
@@ -348,6 +349,33 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
                     self.assertRaisesRegex(ConfigurationError, "not implemented"),
                 ):
                     configured.require_research_credentials()
+
+    def test_local_research_requires_neither_cloud_keys_nor_search_when_disabled(self):
+        settings = Settings(
+            search_enabled=False,
+            role_models={
+                role: profile("ollama", "team/local:7b")
+                for role in (
+                    "quant",
+                    "trading_director",
+                    "news_intelligence",
+                    "risk_manager",
+                )
+            },
+        )
+        settings.require_research_credentials()
+        with self.assertRaisesRegex(ConfigurationError, "EXA_API_KEY"):
+            settings.model_copy(
+                update={"search_enabled": True}
+            ).require_research_credentials()
+
+    def test_one_local_profile_does_not_hide_remaining_cloud_credentials(self):
+        settings = Settings(
+            search_enabled=False,
+            role_models={"quant": profile("ollama", "team/local:7b")},
+        )
+        with self.assertRaisesRegex(ConfigurationError, "OPENAI_API_KEY"):
+            settings.require_research_credentials()
 
     def test_inactive_future_roles_do_not_require_credentials_for_legacy_research(self):
         settings = Settings(

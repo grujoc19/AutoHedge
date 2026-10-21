@@ -6,11 +6,11 @@ phases G1–G7. Numbered phase/step references below describe the earlier six-ph
 implementation history. Its stabilization is complete. G1.1 adds the
 [provider-neutral model contract](docs/MODEL_CALLS.md); G1.2 adds immutable
 [model/provider profiles for six roles](docs/MODEL_CONFIGURATION.md), including
-legacy fallbacks and selected-provider credential checks. Actual provider adapters
-other than OpenAI are still missing. [G1.3](docs/OPENAI_RESEARCH.md) connects the
+legacy fallbacks and selected-provider credential checks. [G1.3](docs/OPENAI_RESEARCH.md) connects the
 existing Swarms roles to validated OpenAI calls, per-role limits and model-call
-audits. The next step is G1.4, Ollama. Unsupported backends are rejected before
-agent construction, never silently replaced by OpenAI.
+audits. [G1.4](docs/OLLAMA_RESEARCH.md) adds Ollama and mixed local/cloud roles
+without fallback. Other backends are rejected before agent construction.
+G1.5a, Anthropic, is next; Gemini and DeepSeek follow separately.
 
 ## Implemented scope
 
@@ -131,8 +131,10 @@ as a fallback alias for the configured cloud binding. POLYGON_BASE_URL remains
 a fallback alias for MASSIVE_BASE_URL. Canonical process names take precedence.
 
 Models, request/cycle time budgets, search enablement, logging and API base URLs
-are documented in `.env.example`. API overrides require HTTPS without embedded
-credentials/query strings. Secrets are excluded from Settings repr/serialization.
+are documented in `.env.example`. Cloud/data API overrides require HTTPS without
+embedded credentials/query strings. Ollama also permits HTTP for an explicitly
+configured trusted endpoint; see its document for local setup and server requirements.
+Secrets are excluded from Settings repr/serialization.
 The existing Jupiter, Massive and Exa adapters share configured headers/timeouts
 and ProviderError; response bodies, raw URLs and keys are not in these errors.
 Yahoo remains a separate yfinance adapter: required fetch failures raise

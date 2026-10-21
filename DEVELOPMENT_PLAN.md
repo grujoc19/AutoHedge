@@ -13,7 +13,9 @@ G1.2 ergänzt [Provider-/Modellkonfiguration je Rolle](docs/MODEL_CONFIGURATION.
 mit alten Fallbacks und sicheren Schlüsseln. [G1.3](docs/OPENAI_RESEARCH.md) bindet
 den Swarms/OpenAI-Pfad jetzt an Profile und Modellverträge: fünf validierte Calls,
 Metadaten-Audit und Exa als expliziter lesender Abruf ohne Agenten-Tools.
-Nächste Arbeit ist **G1.4: Ollama-Adapter**. Weitere Cloud-Adapter fehlen noch. Danach folgen
+[G1.4](docs/OLLAMA_RESEARCH.md) ergänzt Ollama und gemischte lokale/Cloud-Rollen
+ohne Fallback. Nächste Arbeit ist **G1.5a: Anthropic**; Gemini und DeepSeek folgen
+separat. Danach folgen
 persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
@@ -268,8 +270,10 @@ Zielabgleich ist **G1.1: providerneutraler Modellvertrag** implementiert: validi
 Einmalaufrufe, sichere Fehler und explizite Usage-Ungewissheit. G1.2 liefert die
 sechs Rollenprofile und Credential-Auswahl, ohne neue Backends zu aktivieren.
 G1.3 bindet den Swarms/OpenAI-Pfad inzwischen an die Modellgrenze an; vorhandene
-Lifecycle-/Snapshot-/Fehlertests bestehen. Als Nächstes folgt G1.4, ein echter
-Ollama-Adapter, danach weitere geprüfte Cloud-Adapter.
+Lifecycle-/Snapshot-/Fehlertests bestehen. G1.4 ergänzt den nativen Ollama-Adapter
+mit denselben Verträgen, vollständig lokalen oder gemischten Rollen und
+Fehlerabbrüchen ohne Cloud-Fallback. Als Nächstes folgt G1.5a, Anthropic, danach
+Gemini und DeepSeek in getrennten Schritten.
 Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
 oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige

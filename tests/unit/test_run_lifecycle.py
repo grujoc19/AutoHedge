@@ -37,13 +37,14 @@ def make_team(calls, fail=None):
 
 
 class RunLifecycleTests(unittest.TestCase):
-    def test_local_profile_cannot_silently_call_openai_through_the_default_pipeline(
+    def test_unsupported_profile_cannot_silently_call_openai(
         self,
     ):
         settings = Settings(
+            anthropic_api_key="fixture-anthropic",
             role_models={
-                "quant": {"target": {"provider": "ollama", "model": "local-quant"}}
-            }
+                "quant": {"target": {"provider": "anthropic", "model": "unsupported"}}
+            },
         )
         settings.require_model_credentials("quant")
         with (

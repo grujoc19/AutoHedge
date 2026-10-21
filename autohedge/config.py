@@ -41,6 +41,7 @@ class Settings(BaseModel):
     cycle_timeout: float = Field(default=180, gt=0, le=600, allow_inf_nan=False)
     search_enabled: bool = True
     openai_base_url: HttpUrl = HttpUrl("https://api.openai.com/v1")
+    ollama_base_url: HttpUrl = HttpUrl("http://127.0.0.1:11434")
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
     jupiter_base_url: HttpUrl = HttpUrl("https://api.jup.ag")
     massive_base_url: HttpUrl = HttpUrl("https://api.massive.com")
@@ -94,6 +95,13 @@ class Settings(BaseModel):
         if not value.strip():
             raise ValueError("Model name must not be blank")
         return value.strip()
+
+    @field_validator("ollama_base_url")
+    @classmethod
+    def ollama_without_credentials(cls, value):
+        if value.username or value.password or value.query or value.fragment:
+            raise ValueError("Ollama base URL must not contain credentials or query")
+        return value
 
     def secret_values(self) -> tuple[str, ...]:
         return tuple(
@@ -153,13 +161,14 @@ class Settings(BaseModel):
     def require_research_model_configuration(self):
         for role in LEGACY_RESEARCH_ROLES:
             config = self.model_for(role)
-            if config.target.provider != "openai":
+            if config.target.provider not in {"openai", "ollama"}:
                 raise ConfigurationError(
                     "Selected research provider is not implemented yet"
                 )
-            native_model = config.target.model.removeprefix("openai/")
-            if not native_model or "/" in native_model:
-                raise ConfigurationError("Invalid OpenAI model identifier")
+            if config.target.provider == "openai":
+                native_model = config.target.model.removeprefix("openai/")
+                if not native_model or "/" in native_model:
+                    raise ConfigurationError("Invalid OpenAI model identifier")
 
     def require_research_credentials(self):
         self.require_research_model_configuration()
@@ -198,6 +207,7 @@ ENV_FIELDS = {
     "AUTOHEDGE_CYCLE_TIMEOUT": "cycle_timeout",
     "AUTOHEDGE_SEARCH_ENABLED": "search_enabled",
     "AUTOHEDGE_OPENAI_BASE_URL": "openai_base_url",
+    "AUTOHEDGE_OLLAMA_BASE_URL": "ollama_base_url",
     "AUTOHEDGE_EXA_BASE_URL": "exa_base_url",
     "AUTOHEDGE_JUPITER_BASE_URL": "jupiter_base_url",
     "MASSIVE_BASE_URL": "massive_base_url",
