@@ -14,6 +14,11 @@ from autohedge.domain import ResearchReport, ResearchRequest, Stage, StageResult
 from autohedge.errors import AutoHedgeError, ResearchError
 from autohedge.data.contracts import QualityPolicy
 from autohedge.data.quality import validate_market_data, validate_price_time
+from autohedge.snapshots import (
+    check_snapshot_quality,
+    parse_research_snapshot,
+    snapshot_context,
+)
 
 
 class ResearchAgent(Protocol):
@@ -53,7 +58,7 @@ class ResearchOrchestrator:
             quality_policy if quality_policy is not None else QualityPolicy()
         )
 
-    def run(self, request: ResearchRequest) -> ResearchReport:
+    def run(self, request: ResearchRequest, *, team_factory=None) -> ResearchReport:
         run_id = uuid4()
         start = self.clock()
         deadline = self.monotonic() + self.timeout
@@ -68,6 +73,13 @@ class ResearchOrchestrator:
         quality = None
 
         def check_market(at):
+            if request.snapshot is not None:
+                return check_snapshot_quality(
+                    request.snapshot,
+                    expected=request.instrument,
+                    now=at,
+                    policy=self.quality_policy,
+                )
             if request.market_data is not None:
                 return validate_market_data(
                     request.market_data,
@@ -84,9 +96,23 @@ class ResearchOrchestrator:
         with logger.contextualize(run_id=str(run_id)):
             logger.info("Research cycle started")
             try:
+                if request.snapshot is not None:
+                    snapshot = parse_research_snapshot(request.snapshot)
+                    request = ResearchRequest.model_validate(
+                        request.model_copy(update={"snapshot": snapshot})
+                    )
+                context_request = request.model_dump(mode="json", exclude={"snapshot"})
+                if request.snapshot is not None:
+                    context_request["snapshot"] = snapshot_context(request.snapshot)
+                if len(json.dumps(context_request)) > self.max_prompt_chars:
+                    raise ResearchError(
+                        "initialization", "context character budget exceeded"
+                    )
                 quality = check_market(start)
                 try:
-                    team = self.team_factory(start)
+                    team = (
+                        team_factory if team_factory is not None else self.team_factory
+                    )(start)
                 except AutoHedgeError:
                     raise
                 except Exception:
@@ -107,7 +133,7 @@ class ResearchOrchestrator:
                         quality = check_market(self.clock())
                         inputs = {
                             "stage": stage.value,
-                            "request": request.model_dump(mode="json"),
+                            "request": context_request,
                             "previous_results": [
                                 r.model_dump(mode="json") for r in results
                             ],
@@ -117,6 +143,13 @@ class ResearchOrchestrator:
                                 "Do not invent numerical calculations or prices. Explicitly identify missing "
                                 "market/portfolio data and uncertainty. Do not generate executable orders or "
                                 "claim risk approval. Synthesis must reconcile ALL prior stages."
+                                + (
+                                    " Use only the frozen snapshot and its precomputed indicator values. "
+                                    "Cite evidence IDs for factual claims. Evidence hashes identify records, "
+                                    "not independent confirmation or authenticated truth. No additional searches."
+                                    if request.snapshot is not None
+                                    else ""
+                                )
                             ),
                         }
                         stage_start = self.clock()
@@ -151,7 +184,11 @@ class ResearchOrchestrator:
                         results.append(result)
                         logger.info("Stage completed")
                 warnings = ["Research only; no risk approval or order execution."]
-                if request.market is None and request.market_data is None:
+                if (
+                    request.market is None
+                    and request.market_data is None
+                    and request.snapshot is None
+                ):
                     warnings.append(
                         "No validated market snapshot supplied; numerical claims are unverified."
                     )
@@ -159,9 +196,25 @@ class ResearchOrchestrator:
                     warnings.append(
                         "Legacy price-only snapshot; OHLCV quality has not been checked."
                     )
-                if request.market_data is not None and not request.market_data.news:
+                data = (
+                    request.snapshot.market_data
+                    if request.snapshot is not None
+                    else request.market_data
+                )
+                if data is not None and not data.news:
                     warnings.append(
                         "No timestamped news supplied in the market-data bundle."
+                    )
+                if request.market_data is not None:
+                    warnings.append(
+                        "No computed research snapshot supplied; indicator/strategy readiness is unverified."
+                    )
+                if (
+                    request.snapshot is not None
+                    and request.snapshot.history_acquisition is None
+                ):
+                    warnings.append(
+                        "No history acquisition pages supplied; history provenance is caller-asserted."
                     )
                 if request.portfolio is None:
                     warnings.append(

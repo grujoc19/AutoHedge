@@ -152,23 +152,32 @@ assert team.provider_failures == ['exa']
         self.run_offline("""
 import json
 import tempfile
+from unittest.mock import patch
 from datetime import datetime, timezone
 import httpx
 from autohedge import AutoHedge
 from autohedge.config import Settings
 from autohedge.contracts import Instrument
 from autohedge.data.coingecko import CoinGeckoCandleProvider
+from autohedge.data.exa import ExaNewsProvider
 from autohedge.data.contracts import CandleRequest, MarketData
 from autohedge.data.history import HistoryStore
 from autohedge.data.jupiter import JupiterProvider
 from autohedge.indicators import calculate_indicators, indicators_from_snapshot
 from autohedge.workers import build_agent_team
+from autohedge.snapshots import collect_research_snapshot, parse_research_snapshot
 now = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
 mint = 'So11111111111111111111111111111111111111112'
 instrument = Instrument(asset_id=mint, symbol='SOL', venue='solana', quote_currency='USD')
-settings = Settings(search_enabled=False, coingecko_api_key='fixture-key', jupiter_api_key='fixture-key')
+settings = Settings(search_enabled=False, coingecko_api_key='fixture-key', jupiter_api_key='fixture-key', exa_api_key='fixture-key')
 before_cursors = []
 def respond(request):
+    if request.url.path == '/search':
+        return httpx.Response(200, json={'results': [{
+            'id': 'fixture-story', 'url': 'https://news.example/solana',
+            'title': 'Fixture Solana news', 'publishedDate': '2026-10-21T11:55:00Z',
+            'text': 'Untrusted news excerpt',
+        }]})
     if request.url.path == '/price/v3':
         return httpx.Response(200, json={mint: {'usdPrice': 101, 'decimals': 9, 'blockId': 1}})
     before = int(request.url.params['before_timestamp'])
@@ -191,13 +200,18 @@ def factory(clock):
     return team
 with tempfile.TemporaryDirectory() as directory:
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
-        record = CoinGeckoCandleProvider(settings, client=client, clock=lambda: now, page_size=20).fetch_history(
-            CandleRequest(instrument=instrument, interval_seconds=60, count=40, as_of=now))
-        quote = JupiterProvider(settings, client=client, clock=lambda: now,
-            block_time_resolver=lambda block: now).fetch_quote(instrument)
+        frozen = collect_research_snapshot(
+            CandleRequest(instrument=instrument, interval_seconds=60, count=40, as_of=now),
+            history_provider=CoinGeckoCandleProvider(settings, client=client, clock=lambda: now, page_size=20),
+            quote_provider=JupiterProvider(settings, client=client, clock=lambda: now, block_time_resolver=lambda block: now),
+            news_provider=ExaNewsProvider(settings, client=client, clock=lambda: now), clock=lambda: now)
+        record = frozen.history_acquisition
+        quote = frozen.market_data.quote
     store = HistoryStore(directory + '/history')
     digest = store.save(record)
     replayed = store.replay(digest, available_at=now)
+    assert frozen.history_acquisition_id == digest
+    assert parse_research_snapshot(json.loads(frozen.model_dump_json())) == frozen
     assert len(record.pages) == 3
     assert len(before_cursors) == 3
     assert replayed.candles[-1].volume_base is None
@@ -210,15 +224,39 @@ with tempfile.TemporaryDirectory() as directory:
     assert features.latest.volatility == 0
     assert not features.points[32].ready
     assert features.points[33].ready
-    data = MarketData(quote=quote, history=replayed)
+    data = MarketData(quote=quote, history=replayed, news=frozen.market_data.news)
+    assert data == frozen.market_data
+    assert features == frozen.indicators
     engine = AutoHedge(output_dir=directory + '/reports', settings=settings,
         team_factory=factory, clock=lambda: now)
-    report = engine.run_report('Analyze supplied SOL history', instrument=instrument, market_data=data)
+    report = engine.run_report('Analyze supplied SOL history', instrument=instrument, snapshot=frozen)
 assert calls == ['director', 'quant', 'sentiment', 'risk', 'director']
 assert report.market_quality.candle_count == 40
 assert report.market_quality.price_deviation_bps == 0
-assert report.request.market_data.history == replayed
+assert report.request.snapshot.market_data.history == replayed
+assert report.request.snapshot.snapshot_id == frozen.snapshot_id
+assert report.market_quality.policy.require_news
 assert report.execution_enabled is False
+
+# The public default path must create real SDK agents with search tools disabled,
+# even when the application's legacy exploration setting permits live search.
+routes = []
+def offline_default_factory(when, *, settings):
+    routes.append(settings.search_enabled)
+    team = build_agent_team(when, settings=settings)
+    assert not team.sentiment.tools
+    for role in ('director', 'quant', 'sentiment', 'risk'):
+        getattr(team, role).call_llm = lambda *args, **kwargs: 'Offline frozen-snapshot research'
+    return team
+with tempfile.TemporaryDirectory() as directory:
+    with patch('autohedge.workers.build_agent_team', side_effect=offline_default_factory):
+        default_engine = AutoHedge(output_dir=directory, clock=lambda:now,
+            settings=Settings(openai_api_key='fixture-model-key', search_enabled=True))
+        default_report = default_engine.run_report('Frozen default factory', instrument=instrument, snapshot=frozen)
+assert routes == [False]
+assert default_engine.settings.search_enabled is True
+assert default_report.request.snapshot == frozen
+assert default_report.execution_enabled is False
 """)
 
     def test_complete_cycle_through_real_swarms_with_only_model_responses_replaced(

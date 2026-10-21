@@ -89,8 +89,8 @@ IndicatorSeries records implementation version, config, exact instrument/source,
 interval, input receipt time, requested knowledge time, and a SHA-256 history_digest.
 The digest hashes sorted, compact JSON of the validated CandleSeries, including
 its identity, prices, volumes and receipt time. This differs from HistoryStore's
-snapshot ID, which also covers pages/cursors/endpoints. A later snapshot builder
-must link the appropriate acquisition ID as well as feature provenance. Decimal
+snapshot ID, which also covers pages/cursors/endpoints. The [research snapshot builder](RESEARCH_SNAPSHOTS.md)
+links the acquisition ID as well as feature provenance when recorded pages are supplied. Decimal
 representations are preserved; identical serialized series give identical hashes.
 Hashes do not independently authenticate a vendor or prove a caller-supplied
 feature artifact was calculated honestly. Schemas check warm-up, chronology,
@@ -100,7 +100,7 @@ The API does not reject historical data merely for being old: it supports offlin
 analysis/replay. Expected asset, freshness, source requirements and readiness for
 a strategy must still pass the separate market/snapshot gates. There is no
 automatic collection, report/prompt attachment or full ResearchSnapshot assembly
-in this step; phase 2.5 supplies that integration. Indicators provide features
+inside this calculation module; [phase 2.5](RESEARCH_SNAPSHOTS.md) supplies that integration. Indicators provide features
 for the planned Market Anomaly role and quantitative baselines, not a complete
 trading strategy. See [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md).
 

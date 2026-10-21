@@ -141,8 +141,10 @@ Erfolgskriterien festgelegt. Die Evaluation benötigt:
 
 ## Umsetzungs-Backlog und Wiederverwendung
 
-Alle folgenden Punkte sind offen; der Entwicklungsplan führt die Abhängigkeiten.
-Sie sind verbindliche Abnahmen für spätere Schritte, keine vorhandenen Features.
+Der gemeinsame Snapshot mit contentgebundenen EvidenceReference-IDs ist in
+[Schritt 2.5](RESEARCH_SNAPSHOTS.md) umgesetzt. Semantische EvidenceEvent-/
+AgentFinding-Verträge und die folgenden Rollen-/Feed-Aufgaben sind weiterhin
+offen; der Entwicklungsplan führt ihre Abhängigkeiten und Abnahmen.
 
 | Plan-ID | Kleiner Implementierungsschritt | Abnahme |
 | --- | --- | --- |

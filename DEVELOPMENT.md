@@ -26,8 +26,9 @@ Instrument, MarketSnapshot, PortfolioSnapshot, Signal and Rejection contracts.
 Amounts use finite nonnegative/positive Decimal values; timestamps must be
 aware and normalize to UTC. Signal proposals have no execution quantity. Freshness/consistency gates now apply to supplied market-data bundles, and
 legacy price-only inputs are checked for stale/future observation times. No
-automatic feed collection or indicator attachment runs inside the research pipeline.
-Standalone providers, replay and Python indicator calculations are available;
+scheduler-driven feed collection runs inside the research pipeline.
+Explicit snapshot collection and assembly now bind provider observations, replay,
+computed indicators and evidence IDs to the research context.
 Risk approval and trading remain unimplemented. Missing inputs are identified
 in report warnings.
 
@@ -200,8 +201,9 @@ No additional dependencies were introduced.
 
 Jupiter Price V3 does not supply a price event timestamp: createdAt is token
 creation. PriceObservation therefore has event_time=None; a strict Quote needs
-an injected, trusted block-time resolver and freshness validation. No resolver,
-OHLCV provider or automatic snapshot collector is supplied yet. Exa publication
+an injected, trusted block-time resolver and freshness validation. No default
+RPC resolver is supplied. OHLCV and explicit snapshot collection
+are available through phases 2.3 and 2.5. Exa publication
 dates are provider estimates, and malformed/undated news fail closed. Legacy
 helper paths remain available with normalized subsets rather than raw vendor
 fields; see [docs/PROVIDERS.md](docs/PROVIDERS.md) for the output changes,
@@ -245,7 +247,7 @@ Input receipt time must be <= the explicit knowledge time; future/incomplete,
 gapped, malformed or not-yet-received history fails validation. Series record
 implementation/config, input digest, identity, interval and timestamps. The
 calculation API does not itself create a trade signal or change agent prompts.
-Full snapshot assembly is the next step. Definitions, units, reference fixtures
+Full snapshot assembly is available through the phase-2.5 API. Definitions, units, reference fixtures
 and API usage are in [docs/INDICATORS.md](docs/INDICATORS.md).
 
 The user-specified later engine architecture is tracked in
@@ -254,3 +256,26 @@ plan rows (2.5–2.8, 3.1a–3.4). Preserve the functioning research components 
 migration. Local/cloud role routing, source novelty, on-chain event attribution,
 independent evidence and manipulation evaluation have explicit acceptance tests
 to implement; they are not implied by passing the current numeric unit suite.
+
+## Phase 2.5: shared research snapshots
+
+`build_research_snapshot` binds validated MarketData, freshly calculated
+indicators, quality policy/assessment, evidence references and optional history
+acquisition pages to one knowledge time and content ID. `collect_research_snapshot`
+coordinates the existing injected providers in history/news/quote order, without
+partial results or hidden fallbacks. Dated news is required by default; warm-up
+raises the captured minimum to cover all configured indicators. Source records,
+features and hashes are revalidated/recomputed at input/report boundaries.
+Quality arithmetic now owns rounding/traps as well as precision for reproducible
+IDs. Canonical JSON/hash utilities preserve the earlier history/feature ID format.
+
+AutoHedge.run/run_report accept snapshot= with the exact expected instrument.
+All roles receive the same compact current values and evidence manifest; full
+arrays and pages stay in the audit report. Captured and runtime policies combine
+conservatively and freshness remains checked around every stage. The public
+default snapshot factory disables extra Exa searches without changing Settings;
+injected factories must honor that contract. Legacy exploration remains usable
+with explicit computed-readiness limitations. Semantic citation validation,
+strategy signals and risk approval remain later steps. API behavior, defaults,
+collection limits and live-access caveats are in
+[docs/RESEARCH_SNAPSHOTS.md](docs/RESEARCH_SNAPSHOTS.md).

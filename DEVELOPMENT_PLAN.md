@@ -25,8 +25,11 @@ implementiert. Quelle und Annahmen sind in `docs/HISTORY.md` dokumentiert;
 Zugang, Tarifberechtigungen und echte API-Verträge sind weiterhin ungeprüft.
 Schritt 2.4 ergänzt deterministischen Wilder-RSI, MACD und Log-Return-Volatilität
 mit explizitem Warm-up, Datenherkunft und Kenntniszeitpunkt.
-Es gibt noch keine automatische Zusammenstellung vollständiger Marktdaten-Snapshots,
-validierten KI-Handelssignale oder deterministische Risk-Freigabe. Die installierte lokale
+Schritt 2.5 verbindet explizite Provider-Sammlung, datierte Quellen, berechnete
+Indikatoren und Evidenz-IDs zu einem gemeinsamen Snapshot. Der Research-Lauf
+prüft ihn, nutzt einen kompakten Kontext und bewahrt vollständige Audit-Daten.
+Details in `docs/RESEARCH_SNAPSHOTS.md`. Es gibt noch keine automatisch
+geplanten Datenfeeds, validierten KI-Handelssignale oder deterministische Risk-Freigabe. Die installierte lokale
 Runtime wurde mit Python 3.12 geprüft; GitHub-Matrixergebnisse sind noch offen.
 
 ## Geprüfte Grundlage
@@ -227,4 +230,4 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 
 ## Unmittelbar nächste Arbeit
 
-Die Schritte 1.1–1.6 und 2.1–2.4 sind implementiert und offline geprüft. Als Nächstes folgt 2.5: vollständigen Research-Snapshot aus geprüften Marktdaten und tatsächlich berechneten Indikatoren herstellen; Historien-/Featureherkunft und Pflichtdatenstrategie an den Research-Lauf binden. Danach folgen die explizit aufgenommenen News-/Social-, On-Chain- und Liquiditätsfeeds sowie die neue Agentenstruktur aus `docs/ENGINE_ARCHITECTURE.md`. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
+Die Schritte 1.1–1.6 und 2.1–2.5 sind implementiert und offline geprüft. Als Nächstes folgt 2.6: Originalquellen, datierte News-/Announcement-/Social-Ereignisse, Deduplizierung/Versionierung und first_seen/Neuigkeit nachvollziehbar erfassen. Die neuen contentgebundenen EvidenceReference-IDs sind dafür eine Grundlage, ersetzen aber keine semantischen Ereignisse oder unabhängigen Bestätigungen. Danach folgen On-Chain- und Liquiditätsfeeds sowie die neue Agentenstruktur aus `docs/ENGINE_ARCHITECTURE.md`. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.

@@ -61,8 +61,8 @@ trading performance or prove compatibility with remote APIs.
 
 `AutoHedge.run_report()` returns a validated report with a unique run ID, UTC
 timestamps, all five stages and explicit missing-data warnings. Supplied
-`market_data` bundles are now checked before team construction and before/after
-every stage; stale, inconsistent or incomplete data stops research. Reports always
+`market_data` bundles and computed `snapshot` inputs are checked before team
+construction and before/after every stage; stale, inconsistent or incomplete data stops research. Reports always
 have `execution_enabled=false`; BUY/SELL/HOLD schemas exist but agent-generated
 trading signals, risk approval and execution are not yet implemented. Settings
 are loaded from the nearest working-directory `.env` and the process environment
@@ -77,8 +77,10 @@ quotes. The optional [Solana history adapter](docs/HISTORY.md) adds completed US
 OHLCV with explicit volume units and immutable, receipt-aware replay. It requires
 CoinGecko Pro access with suitable entitlements; live access is unverified.
 Python [RSI, MACD and volatility](docs/INDICATORS.md) now have deterministic
-Decimal calculations and explicit warm-up rules. Automatic assembly into the
-research snapshot is the next step.
+Decimal calculations and explicit warm-up rules. The
+[shared snapshot](docs/RESEARCH_SNAPSHOTS.md) combines them with evidence IDs,
+recomputed features, policy checks and a compact view for every role. Collection
+is explicit; scheduler-driven feeds and trading remain future work.
 
 Historical scripts under `experimental/` are separate prototypes,
 not supported trading entry points, and are excluded from the active lint scope.

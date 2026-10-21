@@ -142,4 +142,5 @@ Tests cover page overlap/conflicts, exact boundaries, empty/gapped/incomplete
 windows, provider outages, precision, limits, provenance, concurrent publication,
 corruption and receipt-aware replay. [RSI/MACD/volatility](INDICATORS.md) now
 calculate directly from these normalized series or validated snapshots. Assembly
-of a full research snapshot remains phase 2.5.
+of a full research snapshot is now provided by [phase 2.5](RESEARCH_SNAPSHOTS.md),
+including acquisition IDs and provenance checks.

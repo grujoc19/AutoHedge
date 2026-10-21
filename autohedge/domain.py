@@ -10,6 +10,7 @@ from autohedge.contracts import Amount as Amount, PositiveAmount as PositiveAmou
 from autohedge.contracts import Contract as Contract, Instrument as Instrument
 from autohedge.contracts import Text as Text, reject_bool as reject_bool
 from autohedge.data.contracts import MarketData, QualityAssessment
+from autohedge.snapshots import ResearchSnapshot
 
 
 class MarketSnapshot(Contract):
@@ -69,9 +70,15 @@ class ResearchRequest(Contract):
     portfolio: PortfolioSnapshot | None = None
     instrument: Instrument | None = None
     market_data: MarketData | None = None
+    snapshot: ResearchSnapshot | None = None
 
     @model_validator(mode="after")
     def unambiguous_market_input(self):
+        if self.snapshot is not None:
+            if self.instrument is None or self.instrument != self.snapshot.instrument:
+                raise ValueError("Snapshot requires its exact expected instrument")
+            if self.market is not None or self.market_data is not None:
+                raise ValueError("Supply snapshot or legacy market inputs, not both")
         if self.market_data is not None:
             if self.instrument is None:
                 raise ValueError("An expected instrument is required with market_data")
@@ -121,8 +128,16 @@ class ResearchReport(Contract):
 
     @model_validator(mode="after")
     def complete_pipeline(self):
-        if (self.request.market_data is None) != (self.market_quality is None):
+        has_market = (
+            self.request.market_data is not None or self.request.snapshot is not None
+        )
+        if has_market != (self.market_quality is not None):
             raise ValueError("Market-data reports require a quality assessment")
+        if (
+            self.request.snapshot is not None
+            and self.request.snapshot.as_of > self.started_at
+        ):
+            raise ValueError("Research began before its snapshot was available")
         if (
             self.market_quality is not None
             and not self.started_at

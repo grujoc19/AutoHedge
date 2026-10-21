@@ -15,6 +15,7 @@ from autohedge.data.contracts import MarketData
 from autohedge.errors import ConfigurationError
 from autohedge.logging import configure_logging
 from autohedge.orchestration import ResearchOrchestrator, utc_now
+from autohedge.snapshots import ResearchSnapshot, parse_research_snapshot
 
 
 class AutoHedge:
@@ -50,11 +51,22 @@ class AutoHedge:
         self.last_report = None
         self.conversation = self._conversation_type(time_enabled=True)
 
-        def default_factory(now):
-            self.settings.require_research_credentials()
+        def default_factory(now, *, snapshot_mode=False):
+            settings = (
+                self.settings.model_copy(update={"search_enabled": False})
+                if snapshot_mode
+                else self.settings
+            )
+            settings.require_research_credentials()
             from autohedge.workers import build_agent_team
 
-            return build_agent_team(now, settings=self.settings)
+            return build_agent_team(now, settings=settings)
+
+        self._snapshot_team_factory = (
+            (lambda now: default_factory(now, snapshot_mode=True))
+            if team_factory is None
+            else None
+        )
 
         options = {
             "clock": clock,
@@ -75,18 +87,25 @@ class AutoHedge:
         portfolio: PortfolioSnapshot | None = None,
         instrument: Instrument | None = None,
         market_data: MarketData | None = None,
+        snapshot: ResearchSnapshot | None = None,
     ):
         """Return a validated, non-executable report; failures leave no completed report."""
         self.last_report = None
         self.conversation = self._conversation_type(time_enabled=True)
+        if snapshot is not None:
+            snapshot = parse_research_snapshot(snapshot)
         request = ResearchRequest(
             task=task,
             market=market,
             portfolio=portfolio,
             instrument=instrument,
             market_data=market_data,
+            snapshot=snapshot,
         )
-        report = self.orchestrator.run(request)
+        report = self.orchestrator.run(
+            request,
+            team_factory=self._snapshot_team_factory if snapshot is not None else None,
+        )
         # Conversation is a presentation of this cycle, never another agent's memory.
         self.conversation.add(role="user", content=request.task)
         for result in report.stages:
@@ -120,6 +139,7 @@ class AutoHedge:
         portfolio: PortfolioSnapshot | None = None,
         instrument: Instrument | None = None,
         market_data: MarketData | None = None,
+        snapshot: ResearchSnapshot | None = None,
     ):
         report = self.run_report(
             task,
@@ -127,6 +147,7 @@ class AutoHedge:
             portfolio=portfolio,
             instrument=instrument,
             market_data=market_data,
+            snapshot=snapshot,
         )
         if self.output_type == "dict":
             return report.model_dump(mode="json")

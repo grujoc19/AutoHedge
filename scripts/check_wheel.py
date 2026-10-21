@@ -84,6 +84,7 @@ from autohedge.data.coingecko import CoinGeckoCandleProvider
 from autohedge.data.history import HistoryStore
 from autohedge.config import Settings
 from autohedge.indicators import IndicatorConfig, calculate_indicators
+from autohedge.snapshots import build_research_snapshot, collect_research_snapshot, parse_research_snapshot
 assert IndicatorConfig().minimum_candles == 34
 assert "swarms" not in sys.modules
 assert CoinGeckoCandleProvider(Settings()).max_pages == 10

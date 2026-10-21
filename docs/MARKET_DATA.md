@@ -127,3 +127,11 @@ or honest provider data. Those checks belong to later provider/risk/execution
 work. Normalized Exa tool output remains separate from a submitted bundle and
 is not covered by its news assessment. No new API or private-key binding is needed
 to run this phase's tests.
+
+## Computed research snapshots
+
+For ready Python indicators, bound evidence IDs and optional acquisition pages,
+use [ResearchSnapshot](RESEARCH_SNAPSHOTS.md). That builder defaults to requiring
+dated news and raises the minimum count for indicator warm-up. This differs from
+the base QualityPolicy's optional-news default above. The raw market_data API
+remains an exploratory path without established indicator/strategy readiness.
