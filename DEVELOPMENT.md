@@ -26,7 +26,10 @@ Instrument, MarketSnapshot, PortfolioSnapshot, Signal and Rejection contracts.
 Amounts use finite nonnegative/positive Decimal values; timestamps must be
 aware and normalize to UTC. Signal proposals have no execution quantity. Freshness/consistency gates now apply to supplied market-data bundles, and
 legacy price-only inputs are checked for stale/future observation times. No
-automatic market feeds, indicators, risk approval or trading have been added. Missing inputs are identified in report warnings.
+automatic feed collection or indicator attachment runs inside the research pipeline.
+Standalone providers, replay and Python indicator calculations are available;
+Risk approval and trading remain unimplemented. Missing inputs are identified
+in report warnings.
 
 ## Installation and dependency updates
 
@@ -226,3 +229,28 @@ were added. Source selection, API assumptions, unit compatibility, usage and the
 remaining live-access/entitlement checks are in [docs/HISTORY.md](docs/HISTORY.md).
 Fixtures are synthetic and do not prove live data coverage or license rights.
 Historical-universe bias and provider revisions require separate backtest policy.
+
+## Phase 2.4: deterministic indicators
+
+`autohedge.indicators` computes Wilder RSI, independently SMA-seeded MACD and
+sample log-return volatility from validated CandleSeries. It preserves Decimal
+prices without a float round trip and owns a 128-digit arithmetic context;
+no new numerical dependencies were added. There is no existing active RSI/MACD
+implementation to replace. NumPy/Pandas remain available for later measured ML
+work, rather than being added as a direct dependency for these bounded windows.
+
+None marks unavailable warm-up values. Defaults require 34 candles for complete
+readiness, which is separate from the market-quality gate's 30-candle minimum.
+Input receipt time must be <= the explicit knowledge time; future/incomplete,
+gapped, malformed or not-yet-received history fails validation. Series record
+implementation/config, input digest, identity, interval and timestamps. The
+calculation API does not itself create a trade signal or change agent prompts.
+Full snapshot assembly is the next step. Definitions, units, reference fixtures
+and API usage are in [docs/INDICATORS.md](docs/INDICATORS.md).
+
+The user-specified later engine architecture is tracked in
+[docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md) and the corresponding
+plan rows (2.5–2.8, 3.1a–3.4). Preserve the functioning research components during
+migration. Local/cloud role routing, source novelty, on-chain event attribution,
+independent evidence and manipulation evaluation have explicit acceptance tests
+to implement; they are not implied by passing the current numeric unit suite.

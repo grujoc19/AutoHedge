@@ -140,5 +140,6 @@ silently rewriting receipt times. Identical IDs replay without API calls.
 Run the normal unit, integration, lint and wheel checks from DEVELOPMENT.md.
 Tests cover page overlap/conflicts, exact boundaries, empty/gapped/incomplete
 windows, provider outages, precision, limits, provenance, concurrent publication,
-corruption and receipt-aware replay. RSI/MACD/volatility and assembly of a full
-research snapshot remain phases 2.4–2.5.
+corruption and receipt-aware replay. [RSI/MACD/volatility](INDICATORS.md) now
+calculate directly from these normalized series or validated snapshots. Assembly
+of a full research snapshot remains phase 2.5.

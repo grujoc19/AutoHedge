@@ -76,10 +76,19 @@ require a trusted block-time resolver before they qualify as freshness-checked
 quotes. The optional [Solana history adapter](docs/HISTORY.md) adds completed USD
 OHLCV with explicit volume units and immutable, receipt-aware replay. It requires
 CoinGecko Pro access with suitable entitlements; live access is unverified.
-Automatic snapshot assembly and indicator calculation are subsequent steps.
+Python [RSI, MACD and volatility](docs/INDICATORS.md) now have deterministic
+Decimal calculations and explicit warm-up rules. Automatic assembly into the
+research snapshot is the next step.
 
 Historical scripts under `experimental/` are separate prototypes,
 not supported trading entry points, and are excluded from the active lint scope.
+
+The planned engine roles, local/cloud routing, independent-evidence checks and
+minutes-to-hours strategy horizon are recorded in
+[docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md). News Intelligence,
+Market Anomaly and On-Chain Intelligence will supply a Trading Director; a
+separate deterministic Risk Engine will control order eligibility. These roles
+and model routes are future work, not currently running agents.
 
 ## Roadmap
 

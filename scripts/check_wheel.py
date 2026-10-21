@@ -83,6 +83,9 @@ assert Path(autohedge.__file__).resolve().is_relative_to(Path(sys.prefix).resolv
 from autohedge.data.coingecko import CoinGeckoCandleProvider
 from autohedge.data.history import HistoryStore
 from autohedge.config import Settings
+from autohedge.indicators import IndicatorConfig, calculate_indicators
+assert IndicatorConfig().minimum_candles == 34
+assert "swarms" not in sys.modules
 assert CoinGeckoCandleProvider(Settings()).max_pages == 10
 assert HistoryStore("history").directory == Path("history")
 from autohedge import AutoHedge

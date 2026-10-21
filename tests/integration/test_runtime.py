@@ -161,6 +161,7 @@ from autohedge.data.coingecko import CoinGeckoCandleProvider
 from autohedge.data.contracts import CandleRequest, MarketData
 from autohedge.data.history import HistoryStore
 from autohedge.data.jupiter import JupiterProvider
+from autohedge.indicators import calculate_indicators, indicators_from_snapshot
 from autohedge.workers import build_agent_team
 now = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
 mint = 'So11111111111111111111111111111111111111112'
@@ -173,7 +174,7 @@ def respond(request):
     before = int(request.url.params['before_timestamp'])
     limit = int(request.url.params['limit'])
     before_cursors.append(before)
-    rows = [[int(now.timestamp()) - i * 60, 100, 102, 99, 101, 1500.25] for i in range(1, 31)]
+    rows = [[int(now.timestamp()) - i * 60, 100, 102, 99, 101, 1500.25] for i in range(1, 41)]
     rows = [row for row in rows if row[0] <= before][:limit]
     return httpx.Response(200, json={
         'data': {'id': 'fixture', 'type': 'ohlcv_request_response', 'attributes': {'ohlcv_list': rows}},
@@ -191,22 +192,30 @@ def factory(clock):
 with tempfile.TemporaryDirectory() as directory:
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         record = CoinGeckoCandleProvider(settings, client=client, clock=lambda: now, page_size=20).fetch_history(
-            CandleRequest(instrument=instrument, interval_seconds=60, count=30, as_of=now))
+            CandleRequest(instrument=instrument, interval_seconds=60, count=40, as_of=now))
         quote = JupiterProvider(settings, client=client, clock=lambda: now,
             block_time_resolver=lambda block: now).fetch_quote(instrument)
     store = HistoryStore(directory + '/history')
     digest = store.save(record)
     replayed = store.replay(digest, available_at=now)
-    assert len(record.pages) == 2
-    assert len(before_cursors) == 2
+    assert len(record.pages) == 3
+    assert len(before_cursors) == 3
     assert replayed.candles[-1].volume_base is None
     assert str(replayed.candles[-1].volume_quote) == '1500.25'
+    features = calculate_indicators(replayed, as_of=now)
+    assert features == indicators_from_snapshot(store.load(digest), as_of=now)
+    assert features.latest.ready
+    assert features.latest.rsi == 50
+    assert features.latest.macd == 0
+    assert features.latest.volatility == 0
+    assert not features.points[32].ready
+    assert features.points[33].ready
     data = MarketData(quote=quote, history=replayed)
     engine = AutoHedge(output_dir=directory + '/reports', settings=settings,
         team_factory=factory, clock=lambda: now)
     report = engine.run_report('Analyze supplied SOL history', instrument=instrument, market_data=data)
 assert calls == ['director', 'quant', 'sentiment', 'risk', 'director']
-assert report.market_quality.candle_count == 30
+assert report.market_quality.candle_count == 40
 assert report.market_quality.price_deviation_bps == 0
 assert report.request.market_data.history == replayed
 assert report.execution_enabled is False

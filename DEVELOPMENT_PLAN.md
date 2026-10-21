@@ -23,8 +23,10 @@ Schritt 2.3 ist als optionaler CoinGecko-Onchain-Adapter mit begrenzter Paginati
 explizitem USD-Volumen sowie unveränderlichen, abrufzeitgebundenen Historien
 implementiert. Quelle und Annahmen sind in `docs/HISTORY.md` dokumentiert;
 Zugang, Tarifberechtigungen und echte API-Verträge sind weiterhin ungeprüft.
+Schritt 2.4 ergänzt deterministischen Wilder-RSI, MACD und Log-Return-Volatilität
+mit explizitem Warm-up, Datenherkunft und Kenntniszeitpunkt.
 Es gibt noch keine automatische Zusammenstellung vollständiger Marktdaten-Snapshots,
-Indikatoren, validierten KI-Handelssignale oder deterministische Risk-Freigabe; dies folgt ab Phase 2. Die installierte lokale
+validierten KI-Handelssignale oder deterministische Risk-Freigabe. Die installierte lokale
 Runtime wurde mit Python 3.12 geprüft; GitHub-Matrixergebnisse sind noch offen.
 
 ## Geprüfte Grundlage
@@ -112,11 +114,14 @@ Kein vollständiger Rewrite und zunächst keine Microservices. Ein modularer Pyt
 
 ## Zielarchitektur und feste Grenzen
 
+Die Nutzerergänzung vom 21. Oktober 2026 ist in [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md) festgehalten und für spätere Schritte maßgeblich: News Intelligence, Market Anomaly, On-Chain Intelligence und Trading Director; lokale Modelle mit gezielter Cloud-Eskalation, separate deterministische Risk Engine und Strategien über Minuten bis Stunden. Die folgenden Planzeilen enthalten die zugehörigen Datenfeeds, Rollen, Routing- und Evaluationsaufgaben ausdrücklich. Diese Zielrollen sind noch nicht implementiert.
+
 Arbeitsannahme: zuerst Solana-Spot, zunächst wenige explizit freigegebene liquide Mint-Paare; keine automatische Ausweitung auf beliebige Memecoins und keine Short-/Hebelprodukte. Die Architektur erhält ein Asset-/Venue-Feld für spätere Erweiterungen. Vor Auswahl des historischen Solana-Datenanbieters dessen OHLCV-Abdeckung, Zeitauflösung, Kosten, Limits und Nutzungsrechte prüfen; Jupiter Search/Price allein liefern die benötigte Historie nicht.
 
 ```text
 Provider -> normalisierter, zeitgestempelter Snapshot -> Python-Indikatoren
-         -> Quant + Sentiment -> Director -> validierter Signalvorschlag
+         -> News Intelligence + Market Anomaly + On-Chain Intelligence
+         -> Trading Director -> validierter Signalvorschlag
          -> feste Risikoprüfung + Portfolio-Snapshot -> genehmigte Order
          -> PaperBroker | getrennt freigegebener LiveBroker
          -> Ledger, Fill-Abgleich, Audit-Ereignisse
@@ -153,8 +158,11 @@ Phasengrenze: reproduzierbarer Research-Build mit belastbaren Tests. Keine Behau
 | 2.1 | Gemeinsame Providerverträge und Datenqualitätsregeln: event_time/received_at, Quelle, Währung, Venue, Decimals und Vollständigkeit | 1.5 | Doppelte/unsortierte Candles, falsche Mint, Lücken, veraltete Daten und unrealistische Werte werden erkannt |
 | 2.2 | Jupiter Search/Price und Exa über bestehende Funktionen kapseln; normalisierte Antworten, begrenzte Retries bei Reads, 429/Timeout/Schemafehler behandeln | 1.4, 2.1 | HTTP-Fixtures prüfen Headers/Payload/Parsing; leere Antworten sind keine gültigen Preise; optionale echte Read-only-Contract-Tests separat |
 | 2.3 | Solana-OHLCV-/Volumenquelle nach dokumentierter Eignungsprüfung anbinden; Historie seitenweise und unveränderlich speichern | 2.1 | Überlappende Seiten, Intervallgrenzen, Provider-Ausfall und History-Replay getestet; keine stillschweigend erfundenen Ersatzkurse |
-| 2.4 | RSI, MACD und realisierte Volatilität in Python berechnen; vorhandene NumPy/Pandas verwenden | 2.3 | Referenzreihen prüfen Initialisierung/Warm-up, konstante und fehlende Werte; keine zukünftigen Candles im Ergebnis |
-| 2.5 | Gemeinsamen Research-Snapshot aus Kurs, Candles, Indikatoren und datierten News herstellen | 2.2, 2.4 | Ein Snapshot ist reproduzierbar, ausreichend frisch und mit Quellen belegbar; fehlende Pflichtdaten blockieren ein Handelssignal |
+| 2.4 | RSI, MACD und realisierte Volatilität aus den bestehenden Decimal-Candles berechnen; keine zusätzliche Numerik-Abhängigkeit für die begrenzten Fenster | 2.3 | Referenzreihen prüfen Initialisierung/Warm-up, konstante und fehlende Werte; keine zukünftigen Candles im Ergebnis |
+| 2.5 | Gemeinsamen Research-Snapshot aus Kurs, Candles, Indikatoren und datierten News; Evidenz-IDs und Kenntniszeiten vereinheitlichen | 2.2, 2.4 | Reproduzierbare Herkunft/Zeitbasis; fehlende Pflichtdaten oder unvollständiges Indikator-Warm-up blockieren ein Handelssignal |
+| 2.6 | Lesende News-/Announcement-/Social-Feeds; Originalquellen, Ereignis-Deduplizierung, first_seen und Neuigkeit speichern | 2.5 | Reposts, alte Meldungen und Edits unterscheiden; betroffene Mints belegen; fehlende Social-Quellen explizit melden |
+| 2.7 | Solana-Ereignisse über RPC/Indexer normalisieren: Transfers, tatsächliche Swaps, Konzentration und LP-Bewegungen | 2.1, 2.5 | Transfer nicht als Kauf ausgeben; Signatur/Instruktions-ID, doppelte Events, Wallet-Cluster-Unsicherheit und Bestätigung/Reorg testen |
+| 2.8 | Orderbuch-/AMM-Liquiditätsdaten mit getrennten Einheiten und Historie ergänzen | 2.5 | Sequenz-/Feed-Lücken erkennen; AMM-Reserven nicht als Orderbuch interpretieren; keine Abweichung ohne passende Baseline behaupten |
 
 Phasengrenze: konsistente reale Daten und geprüfte Berechnungen; Live-Providerprüfungen mit tatsächlichen Zugängen müssen zusätzlich zu HTTP-Fixtures bestehen.
 
@@ -162,10 +170,13 @@ Phasengrenze: konsistente reale Daten und geprüfte Berechnungen; Live-Providerp
 
 | Schritt | Umsetzung und Wiederverwendung | Abhängigkeit | Konkrete Abnahme |
 | --- | --- | --- | --- |
-| 3.1 | Quant interpretiert berechnete Werte; Sentiment bewertet datierte Quellen. Rollenoutputs mit Evidenz-IDs und Begrenzungen typisieren | 1.6, 2.5 | Agent kann keine nicht gelieferte Kennzahl als berechneten Fakt ausgeben; ungültiges Modell-JSON führt zu Ablehnung |
-| 3.2 | Director aggregiert nach abgeschlossener Quant-/Sentiment-Analyse einen BUY-/SELL-/HOLD-Vorschlag mit Begründung | 3.1 | Widersprüche und unzureichende Evidenz führen definiert zu HOLD; keine Order bei unvollständigen Pflichtrollen |
-| 3.3 | Risk-Agent liefert ergänzende Warnungen; Budget für LLM-Aufrufe, Laufzeit und begrenzte Reparaturversuche einführen | 3.2 | Schleifen/Timeouts begrenzt; Warnungen können Ausführung blockieren, aber späteres hartes Limit nicht überschreiben |
-| 3.4 | Research-Evaluation mit eingefrorenen Snapshots und adversarialen News-/Tool-Antworten | 3.3 | Prompt-Injection erzeugt keine Tool-/Wallet-Berechtigung; Quellenbezüge und Schemakonformität messbar; LLM-Qualität separat von deterministischen Unit-Tests |
+| 3.1a | EvidenceEvent/AgentFinding-Verträge für Fakten, Interpretation, Unsicherheit, Neuigkeit und Evidenz-Abhängigkeiten; bestehende Rollen schrittweise migrieren | 1.6, 2.5 | Schemas und Pflichtrollen geprüft; keine Kennzahl ohne Berechnung oder Evidenz ohne Herkunft |
+| 3.1b | Sentiment-/Exa-Kern zu News Intelligence weiterentwickeln: Ereignis, betroffene Mints, Neuigkeit und mögliche Auswirkungen | 3.1a, 2.6 | Bekannt/neu/unklar belegt; Reposts und widersprüchliche Quellen geprüft; keine Rechte durch News-Prompt-Injection |
+| 3.1c | Quant-/Indikator-Kern zu Market Anomaly weiterentwickeln: lokale Statistik/ML zur Erkennung, lokales LLM zur Interpretation | 3.1a, 2.4; zusätzliche Modi 2.8 | Preis-/Volumen- und Regime-Abweichungen reproduzierbar; Train/Test getrennt; fehlende Book-/Liquiditätsfeeds verhindern entsprechende Behauptungen |
+| 3.1d | On-Chain Intelligence in Python mit lokaler Mustererkennung | 3.1a, 2.7 | Wallet-/Token-/LP-Befunde belegt, gemeinsame Wallet-Kontrolle und unvollständige Finalität berücksichtigt |
+| 3.2 | Trading Director aggregiert vollständige News-/Anomaly-/On-Chain-Befunde über ein leistungsfähigeres Cloud-Modell; unabhängige Bestätigungen und Gegenhypothesen prüfen | 3.1b–3.1d | BUY/SELL/HOLD mit Evidenz, Zeithorizont und Gültigkeit; Doppelzählung verhindert; unzureichende Evidenz führt zu HOLD; keine Ausführungsbefugnis |
+| 3.3 | Lokales/Cloud-Routing pro Rolle und begrenzte News-Eskalation; Kosten-/Zeitbudget, Ausfallpfade und optionale Risk-Advisor-Warnungen | 3.1a, 3.2 | Gleiche Schemas pro Route; lokaler Ausfall/Timeout/Budgetgrenze führt definiert zu Abstention/HOLD; Warnungen können feste Risk-Limits nicht lockern |
+| 3.4 | Research-Evaluation mit eingefrorenen Snapshots und adversarialen News-/Tool-Antworten | 3.3 | Prompt-Injection erzeugt keine Tool-/Wallet-Berechtigung; Quellenbezüge/Schemakonformität und Manipulationsfälle messbar; Ablationen prüfen unabhängigen Zusatznutzen; LLM-Qualität separat von deterministischen Unit-Tests |
 
 Phasengrenze: nachvollziehbare Signale, keine Erlaubnis zum Signieren oder Senden.
 
@@ -212,8 +223,8 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 - Vor der Evaluation werden Beobachtungsdauer, Mindestzahl unterschiedlicher Handelssituationen, Verlustgrenzen und akzeptable Betriebsfehler festgelegt. Keine nachträgliche Auswahl erfolgreicher Zeitfenster und keine pauschale Profitabilitätsgarantie.
 - Kill-Switch, doppelte Events, Timeout nach Versand, stale Quotes, problematische Token und Neustart unter offenen Orders sind nachweislich behandelt.
 - Separater Wallet-/Signierzugang mit begrenztem Kapital; privater Schlüssel bleibt außerhalb des LLM-Kontexts. Proxy-API-Secrets sind kein Ersatz für lokale Signier-/Schlüsselverwaltung.
-- Live-Modus ist standardmäßig aus. Die vorliegende Beauftragung erlaubt Analyse und Planung; sie ist keine Freigabe für Echtgeldhandel.
+- Live-Modus ist standardmäßig aus. Die Beauftragung erlaubt Analyse, Implementierung und Tests; sie ist keine Freigabe für Echtgeldhandel.
 
 ## Unmittelbar nächste Arbeit
 
-Die Schritte 1.1–1.6 und 2.1–2.3 sind implementiert und offline geprüft. Als Nächstes folgt 2.4: RSI, MACD und realisierte Volatilität deterministisch aus abgeschlossenen Candles berechnen; Warm-up, Referenzwerte und fehlende Werte testen. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
+Die Schritte 1.1–1.6 und 2.1–2.4 sind implementiert und offline geprüft. Als Nächstes folgt 2.5: vollständigen Research-Snapshot aus geprüften Marktdaten und tatsächlich berechneten Indikatoren herstellen; Historien-/Featureherkunft und Pflichtdatenstrategie an den Research-Lauf binden. Danach folgen die explizit aufgenommenen News-/Social-, On-Chain- und Liquiditätsfeeds sowie die neue Agentenstruktur aus `docs/ENGINE_ARCHITECTURE.md`. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
