@@ -19,6 +19,10 @@ Schritt 2.2 ist implementiert: validierte Jupiter-/Exa-Adapter, begrenzte
 Read-Retries und offline geprüfte HTTP-Verträge. Jupiter-Preise erhalten ohne
 vertrauenswürdige Blockzeitauflösung keinen erfundenen Ereigniszeitpunkt;
 datierte Exa-Quellen werden normalisiert. Details in `docs/PROVIDERS.md`.
+Schritt 2.3 ist als optionaler CoinGecko-Onchain-Adapter mit begrenzter Pagination,
+explizitem USD-Volumen sowie unveränderlichen, abrufzeitgebundenen Historien
+implementiert. Quelle und Annahmen sind in `docs/HISTORY.md` dokumentiert;
+Zugang, Tarifberechtigungen und echte API-Verträge sind weiterhin ungeprüft.
 Es gibt noch keine automatische Zusammenstellung vollständiger Marktdaten-Snapshots,
 Indikatoren, validierten KI-Handelssignale oder deterministische Risk-Freigabe; dies folgt ab Phase 2. Die installierte lokale
 Runtime wurde mit Python 3.12 geprüft; GitHub-Matrixergebnisse sind noch offen.
@@ -212,4 +216,4 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 
 ## Unmittelbar nächste Arbeit
 
-Die Schritte 1.1–1.6 und 2.1–2.2 sind implementiert. Als Nächstes folgt 2.3: eine geeignete Solana-OHLCV-Quelle anhand dokumentierter Abdeckung, Einheiten, Zeitstempel, Pagination und Zugriffsbedingungen auswählen und anbinden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
+Die Schritte 1.1–1.6 und 2.1–2.3 sind implementiert und offline geprüft. Als Nächstes folgt 2.4: RSI, MACD und realisierte Volatilität deterministisch aus abgeschlossenen Candles berechnen; Warm-up, Referenzwerte und fehlende Werte testen. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.

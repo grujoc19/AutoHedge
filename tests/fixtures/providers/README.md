@@ -17,3 +17,13 @@ precision. The token-search updatedAt is deliberately recent while price
 createdAt is old; neither may be promoted to a price event timestamp. Exa's
 publication date is fixed for an injected UTC clock. Malformed payload variants
 are constructed in tests from these fixtures.
+
+CoinGecko OHLCV fixture added for phase 2.3, using the official SDK at
+[`daa29b33`](https://github.com/coingecko/coingecko-python/tree/daa29b33de0389cb13b47f5590be18181447ac0c):
+`src/coingecko_sdk/resources/onchain/networks/tokens/ohlcv.py` and
+`src/coingecko_sdk/types/onchain/networks/tokens/ohlcv_get_timeframe_response.py`.
+The three descending minute rows, ID, prices and turnover are synthetic. Metadata
+names the requested mint; quote metadata says USDC while the requested currency
+is USD, to test that metadata does not silently change the requested units.
+Interpretation of timestamp/volume/order and live availability must be verified
+against real authenticated responses separately; see docs/HISTORY.md.

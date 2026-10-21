@@ -25,6 +25,7 @@ class RuntimeTests(unittest.TestCase):
             "JUPITER_API_KEY",
             "SOLANA_PRIVATE_KEY",
             "MASSIVE_API_KEY",
+            "COINGECKO_PRO_API_KEY",
         ):
             child_env.pop(name, None)
         with tempfile.TemporaryDirectory() as directory:
@@ -145,6 +146,70 @@ with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         else:
             raise AssertionError('Undated news must fail')
 assert team.provider_failures == ['exa']
+""")
+
+    def test_collected_and_replayed_history_reaches_real_research_quality_gate(self):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime, timezone
+import httpx
+from autohedge import AutoHedge
+from autohedge.config import Settings
+from autohedge.contracts import Instrument
+from autohedge.data.coingecko import CoinGeckoCandleProvider
+from autohedge.data.contracts import CandleRequest, MarketData
+from autohedge.data.history import HistoryStore
+from autohedge.data.jupiter import JupiterProvider
+from autohedge.workers import build_agent_team
+now = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
+mint = 'So11111111111111111111111111111111111111112'
+instrument = Instrument(asset_id=mint, symbol='SOL', venue='solana', quote_currency='USD')
+settings = Settings(search_enabled=False, coingecko_api_key='fixture-key', jupiter_api_key='fixture-key')
+before_cursors = []
+def respond(request):
+    if request.url.path == '/price/v3':
+        return httpx.Response(200, json={mint: {'usdPrice': 101, 'decimals': 9, 'blockId': 1}})
+    before = int(request.url.params['before_timestamp'])
+    limit = int(request.url.params['limit'])
+    before_cursors.append(before)
+    rows = [[int(now.timestamp()) - i * 60, 100, 102, 99, 101, 1500.25] for i in range(1, 31)]
+    rows = [row for row in rows if row[0] <= before][:limit]
+    return httpx.Response(200, json={
+        'data': {'id': 'fixture', 'type': 'ohlcv_request_response', 'attributes': {'ohlcv_list': rows}},
+        'meta': {'base': {'address': mint}},
+    })
+calls = []
+def factory(clock):
+    team = build_agent_team(clock, settings=settings)
+    for role in ('director', 'quant', 'sentiment', 'risk'):
+        def response(*args, _role=role, **kwargs):
+            calls.append(_role)
+            return 'Offline research with supplied data: ' + _role
+        getattr(team, role).call_llm = response
+    return team
+with tempfile.TemporaryDirectory() as directory:
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        record = CoinGeckoCandleProvider(settings, client=client, clock=lambda: now, page_size=20).fetch_history(
+            CandleRequest(instrument=instrument, interval_seconds=60, count=30, as_of=now))
+        quote = JupiterProvider(settings, client=client, clock=lambda: now,
+            block_time_resolver=lambda block: now).fetch_quote(instrument)
+    store = HistoryStore(directory + '/history')
+    digest = store.save(record)
+    replayed = store.replay(digest, available_at=now)
+    assert len(record.pages) == 2
+    assert len(before_cursors) == 2
+    assert replayed.candles[-1].volume_base is None
+    assert str(replayed.candles[-1].volume_quote) == '1500.25'
+    data = MarketData(quote=quote, history=replayed)
+    engine = AutoHedge(output_dir=directory + '/reports', settings=settings,
+        team_factory=factory, clock=lambda: now)
+    report = engine.run_report('Analyze supplied SOL history', instrument=instrument, market_data=data)
+assert calls == ['director', 'quant', 'sentiment', 'risk', 'director']
+assert report.market_quality.candle_count == 30
+assert report.market_quality.price_deviation_bps == 0
+assert report.request.market_data.history == replayed
+assert report.execution_enabled is False
 """)
 
     def test_complete_cycle_through_real_swarms_with_only_model_responses_replaced(

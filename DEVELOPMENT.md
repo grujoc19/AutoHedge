@@ -204,3 +204,25 @@ helper paths remain available with normalized subsets rather than raw vendor
 fields; see [docs/PROVIDERS.md](docs/PROVIDERS.md) for the output changes,
 retry semantics, pinned API sources and integration limits. These fixtures do
 not replace authenticated read-only provider contract checks.
+
+## Phase 2.3: Solana history and replay
+
+The optional CoinGecko Onchain CandleProvider collects exact completed USD
+windows by mint and bounded pagination, rejecting gaps and conflicting overlaps.
+Candle.volume_base is now optional, and volume_quote is supported; at least one
+explicit unit is required. Existing base-volume payloads remain compatible.
+CoinGecko's USD-mode turnover maps to volume_quote; no token volume is inferred.
+
+HistorySnapshot preserves normalized pages, endpoint/cursors and receipt times.
+HistoryStore writes complete canonical snapshots atomically without overwrites,
+verifies their hashes and schemas, and requires an explicit availability clock
+for replay. A later backfill cannot impersonate a previously observed snapshot.
+There is no network/cache fallback during replay. Provider outages never return
+or publish partial windows. Solana address validation is shared with Jupiter.
+
+COINGECKO_PRO_API_KEY is optional, secret-protected and only used by this adapter;
+AUTOHEDGE_COINGECKO_BASE_URL can override its HTTPS Pro endpoint. No dependencies
+were added. Source selection, API assumptions, unit compatibility, usage and the
+remaining live-access/entitlement checks are in [docs/HISTORY.md](docs/HISTORY.md).
+Fixtures are synthetic and do not prove live data coverage or license rights.
+Historical-universe bias and provider revisions require separate backtest policy.

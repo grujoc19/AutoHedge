@@ -60,6 +60,7 @@ def main():
             "JUPITER_API_KEY",
             "SOLANA_PRIVATE_KEY",
             "MASSIVE_API_KEY",
+            "COINGECKO_PRO_API_KEY",
         ):
             child_env.pop(name, None)
         subprocess.run(
@@ -79,6 +80,11 @@ from pathlib import Path
 import sys
 import autohedge
 assert Path(autohedge.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+from autohedge.data.coingecko import CoinGeckoCandleProvider
+from autohedge.data.history import HistoryStore
+from autohedge.config import Settings
+assert CoinGeckoCandleProvider(Settings()).max_pages == 10
+assert HistoryStore("history").directory == Path("history")
 from autohedge import AutoHedge
 from autohedge.workers import build_agent_team
 team = build_agent_team()

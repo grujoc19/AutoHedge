@@ -73,8 +73,10 @@ boundaries. See [docs/MARKET_DATA.md](docs/MARKET_DATA.md) for the new provider-
 quote/OHLCV/news contracts and data-quality policy. Validated Jupiter and Exa
 adapters are described in [docs/PROVIDERS.md](docs/PROVIDERS.md). Jupiter USD prices
 require a trusted block-time resolver before they qualify as freshness-checked
-quotes. Historical candles, automatic snapshot collection and indicator calculation
-are subsequent steps.
+quotes. The optional [Solana history adapter](docs/HISTORY.md) adds completed USD
+OHLCV with explicit volume units and immutable, receipt-aware replay. It requires
+CoinGecko Pro access with suitable entitlements; live access is unverified.
+Automatic snapshot assembly and indicator calculation are subsequent steps.
 
 Historical scripts under `experimental/` are separate prototypes,
 not supported trading entry points, and are excluded from the active lint scope.

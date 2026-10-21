@@ -35,6 +35,32 @@ class ConfigurationTests(unittest.TestCase):
             cleared = load_settings(environ={"OPENAI_API_KEY": ""}, env_file=file)
             self.assertIsNone(cleared.openai_api_key)
 
+    def test_optional_coingecko_settings_auth_and_secret_protection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / ".env"
+            file.write_text("COINGECKO_PRO_API_KEY=file-history-secret\n")
+            settings = load_settings(
+                environ={
+                    "COINGECKO_PRO_API_KEY": "process-history-secret",
+                    "AUTOHEDGE_COINGECKO_BASE_URL": "https://history.example/api/v3",
+                },
+                env_file=file,
+            )
+            self.assertEqual(
+                settings.headers("coingecko"),
+                {"x-cg-pro-api-key": "process-history-secret"},
+            )
+            self.assertIn("process-history-secret", settings.secret_values())
+            self.assertNotIn("process-history-secret", repr(settings))
+            self.assertNotIn("process-history-secret", settings.model_dump_json())
+            self.assertIsNone(
+                load_settings(
+                    environ={"COINGECKO_PRO_API_KEY": ""}, env_file=file
+                ).coingecko_api_key
+            )
+        with self.assertRaises(ValidationError):
+            Settings(coingecko_base_url="http://history.example")
+
     def test_optional_providers_are_not_required_for_research(self):
         Settings(
             openai_api_key="test-openai-key", exa_api_key="test-exa-key"
@@ -95,6 +121,7 @@ class LoggingTests(unittest.TestCase):
             Settings(
                 openai_api_key="known-openai-secret",
                 solana_private_key="known-wallet-secret",
+                coingecko_api_key="known-history-secret",
             ),
             sink=capture,
         )
@@ -105,7 +132,7 @@ class LoggingTests(unittest.TestCase):
                     "nested": "known-wallet-secret",
                 }
             ).info(
-                "key known-openai-secret; Authorization: Bearer unknown-secret; x-api-key=other-secret"
+                "key known-openai-secret; Authorization: Bearer unknown-secret; x-api-key=other-secret; x-cg-pro-api-key=unconfigured-cg-value; known-history-secret"
             )
             try:
                 raise RuntimeError("known-wallet-secret")
@@ -117,6 +144,8 @@ class LoggingTests(unittest.TestCase):
             "known-wallet-secret",
             "unknown-secret",
             "other-secret",
+            "known-history-secret",
+            "unconfigured-cg-value",
         ):
             self.assertNotIn(secret, text)
         self.assertIn("test-run", text)

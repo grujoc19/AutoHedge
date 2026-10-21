@@ -12,7 +12,9 @@ continuous spot markets such as Solana; it is not an exchange-calendar model.
 - Quote prices and candle OHLC are **quote-currency units per one base token**.
   USD is not automatically treated as USDC. No implicit currency conversion occurs.
 - Quote volume fields distinguish base-token and quote-currency 24h volume.
-  Candle volume is explicitly in base-token units, never raw lamports.
+  Candle volume_base is in base-token units and volume_quote in quote-currency
+  units. At least one is required; a missing unit is None, never an inferred zero.
+  No raw lamports or turnover/close-price approximation is accepted as base volume.
 - Quote base/quote token decimals are explicit integers from 0 to 30. Values must
   be normalized by the adapter; declaring decimals does not perform scaling.
 - Monetary inputs use finite Decimal values (at most 80 digits, at most 40
@@ -106,7 +108,8 @@ will be implemented in subsequent phases.
 coverage (including the latest completed interval). NewsProvider returns
 timestamped NewsArticle objects. QuoteProvider and CandleProvider also expose
 those capabilities separately. Jupiter implements quotes only with a trusted
-block-time resolver; Exa implements news. Historical candles remain a later step.
+block-time resolver; Exa implements news. The optional CoinGecko CandleProvider
+and immutable replay are described in [HISTORY.md](HISTORY.md).
 
 Run the installed-dependency tests:
 

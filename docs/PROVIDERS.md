@@ -50,7 +50,8 @@ USD quote_decimals=2 denotes currency minor units; prices are not rounded to cen
 Jupiter supplies no candle history through these endpoints. QuoteProvider and
 CandleProvider are separate Protocols; MarketDataProvider combines both. This
 adapter does not claim to implement fetch_candles. Historical OHLCV and volume
-remain phase 2.3.
+are supplied separately by the optional [CoinGecko adapter](HISTORY.md); its
+access and live contracts require verification.
 
 ## Exa news
 

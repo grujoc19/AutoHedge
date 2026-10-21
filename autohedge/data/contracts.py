@@ -35,7 +35,7 @@ class Quote(Contract):
 
 
 class Candle(Contract):
-    """UTC half-open [open_time, close_time); prices in quote units, volume in base."""
+    """UTC half-open interval; prices in quote units, volume units are explicit."""
 
     open_time: AwareDatetime
     close_time: AwareDatetime
@@ -43,10 +43,13 @@ class Candle(Contract):
     high: DataPrice
     low: DataPrice
     close: DataPrice
-    volume_base: DataAmount
+    volume_base: DataAmount | None = None
+    volume_quote: DataAmount | None = None
 
     @model_validator(mode="after")
     def valid_bar(self):
+        if self.volume_base is None and self.volume_quote is None:
+            raise ValueError("At least one explicitly denominated volume is required")
         if self.close_time <= self.open_time:
             raise ValueError("Candle close must follow open")
         if self.high < max(self.open, self.close, self.low):

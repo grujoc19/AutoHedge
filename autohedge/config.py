@@ -19,6 +19,7 @@ class Settings(BaseModel):
     exa_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     jupiter_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     massive_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    coingecko_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     solana_private_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     model: str = Field(default="gpt-4.1", min_length=1, max_length=100)
     sentiment_model: str = Field(default="gpt-4o-mini", min_length=1, max_length=100)
@@ -30,6 +31,7 @@ class Settings(BaseModel):
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
     jupiter_base_url: HttpUrl = HttpUrl("https://api.jup.ag")
     massive_base_url: HttpUrl = HttpUrl("https://api.massive.com")
+    coingecko_base_url: HttpUrl = HttpUrl("https://pro-api.coingecko.com/api/v3")
     market_quality: QualityPolicy = Field(default_factory=QualityPolicy)
 
     @field_validator(
@@ -37,6 +39,7 @@ class Settings(BaseModel):
         "exa_api_key",
         "jupiter_api_key",
         "massive_api_key",
+        "coingecko_api_key",
         "solana_private_key",
         mode="before",
     )
@@ -46,7 +49,9 @@ class Settings(BaseModel):
             return None
         return value
 
-    @field_validator("exa_base_url", "jupiter_base_url", "massive_base_url")
+    @field_validator(
+        "exa_base_url", "jupiter_base_url", "massive_base_url", "coingecko_base_url"
+    )
     @classmethod
     def https_without_credentials(cls, value):
         if (
@@ -76,6 +81,7 @@ class Settings(BaseModel):
                 "exa_api_key",
                 "jupiter_api_key",
                 "massive_api_key",
+                "coingecko_api_key",
                 "solana_private_key",
             )
             if (secret := getattr(self, name)) is not None
@@ -94,11 +100,11 @@ class Settings(BaseModel):
         if secret is None:
             raise ConfigurationError(f"Missing API key for {provider}")
         key = secret.get_secret_value()
-        return (
-            {"Authorization": f"Bearer {key}"}
-            if provider == "massive"
-            else {"x-api-key": key}
-        )
+        if provider == "massive":
+            return {"Authorization": f"Bearer {key}"}
+        if provider == "coingecko":
+            return {"x-cg-pro-api-key": key}
+        return {"x-api-key": key}
 
 
 ENV_FIELDS = {
@@ -106,6 +112,7 @@ ENV_FIELDS = {
     "EXA_API_KEY": "exa_api_key",
     "JUPITER_API_KEY": "jupiter_api_key",
     "MASSIVE_API_KEY": "massive_api_key",
+    "COINGECKO_PRO_API_KEY": "coingecko_api_key",
     "SOLANA_PRIVATE_KEY": "solana_private_key",
     "AUTOHEDGE_MODEL": "model",
     "AUTOHEDGE_SENTIMENT_MODEL": "sentiment_model",
@@ -117,6 +124,7 @@ ENV_FIELDS = {
     "AUTOHEDGE_EXA_BASE_URL": "exa_base_url",
     "AUTOHEDGE_JUPITER_BASE_URL": "jupiter_base_url",
     "MASSIVE_BASE_URL": "massive_base_url",
+    "AUTOHEDGE_COINGECKO_BASE_URL": "coingecko_base_url",
 }
 
 
@@ -149,6 +157,7 @@ def load_settings(
         "exa_api_key",
         "jupiter_api_key",
         "massive_api_key",
+        "coingecko_api_key",
         "solana_private_key",
         "log_file",
     ):

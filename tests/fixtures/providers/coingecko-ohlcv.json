@@ -1,0 +1,45 @@
+{
+  "data": {
+    "id": "fixture-ohlcv-request",
+    "type": "ohlcv_request_response",
+    "attributes": {
+      "ohlcv_list": [
+        [
+          1792583940,
+          100,
+          102,
+          99,
+          101,
+          1500.25
+        ],
+        [
+          1792583880,
+          100,
+          102,
+          99,
+          101,
+          1500.25
+        ],
+        [
+          1792583820,
+          100,
+          102,
+          99,
+          101,
+          1500.25
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "base": {
+      "address": "So11111111111111111111111111111111111111112",
+      "name": "Wrapped SOL",
+      "symbol": "SOL"
+    },
+    "quote": {
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "symbol": "USDC"
+    }
+  }
+}

@@ -12,7 +12,7 @@ _lock = RLock()
 _secrets: set[str] = set()
 _credentials = re.compile(
     r"(?i)(authorization[\"']?\s*[:=]\s*[\"']?(?:bearer\s+)?|"
-    r"(?:x-api-key|api[_-]?key|private[_-]?key|token)[\"']?\s*[:=]\s*[\"']?)([^\s\"',;}]+)"
+    r"(?:x-cg-pro-api-key|x-api-key|api[_-]?key|private[_-]?key|token)[\"']?\s*[:=]\s*[\"']?)([^\s\"',;}]+)"
 )
 
 
