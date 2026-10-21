@@ -12,11 +12,15 @@ Stand und sind entsprechend historisch zu lesen. Inzwischen sind auch 1.4–1.6
 lokal umgesetzt: zentrale Settings und geschützte Logs, gemeinsame Providerfehler,
 validierte Domänenverträge und fünf explizite Research-Stufen mit frischen Teams.
 Phase 1 ist als Commit `5daea6e` auf `feat/stabilize-research-core` veröffentlicht.
-Schritt 2.1 ist inzwischen lokal umgesetzt: normalisierte Quote-/OHLCV-/News-
+Schritt 2.1 ist als Commit `71e7384` veröffentlicht: normalisierte Quote-/OHLCV-/News-
 Verträge, Provider-Protokolle, Datenqualitätsprüfung vor und während Research
 sowie ein nachvollziehbarer Prüfbericht. Details in `docs/MARKET_DATA.md`.
-Es gibt noch keine automatische Datenbeschaffung, Indikatoren, validierten
-KI-Handelssignale oder deterministische Risk-Freigabe; dies folgt ab Phase 2. Die installierte lokale
+Schritt 2.2 ist implementiert: validierte Jupiter-/Exa-Adapter, begrenzte
+Read-Retries und offline geprüfte HTTP-Verträge. Jupiter-Preise erhalten ohne
+vertrauenswürdige Blockzeitauflösung keinen erfundenen Ereigniszeitpunkt;
+datierte Exa-Quellen werden normalisiert. Details in `docs/PROVIDERS.md`.
+Es gibt noch keine automatische Zusammenstellung vollständiger Marktdaten-Snapshots,
+Indikatoren, validierten KI-Handelssignale oder deterministische Risk-Freigabe; dies folgt ab Phase 2. Die installierte lokale
 Runtime wurde mit Python 3.12 geprüft; GitHub-Matrixergebnisse sind noch offen.
 
 ## Geprüfte Grundlage
@@ -208,4 +212,4 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 
 ## Unmittelbar nächste Arbeit
 
-Die Schritte 1.1–1.6 sind lokal implementiert. Schritt 2.1 ist umgesetzt. Als Nächstes folgt 2.2: bestehende Jupiter-/Exa-Helfer in konkrete, mit HTTP-Fixtures geprüfte Provideradapter überführen. Für 2.3 muss separat eine geeignete Solana-OHLCV-Quelle gewählt und deren Zugriff bestätigt werden. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
+Die Schritte 1.1–1.6 und 2.1–2.2 sind implementiert. Als Nächstes folgt 2.3: eine geeignete Solana-OHLCV-Quelle anhand dokumentierter Abdeckung, Einheiten, Zeitstempel, Pagination und Zugriffsbedingungen auswählen und anbinden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.

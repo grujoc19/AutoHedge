@@ -70,8 +70,11 @@ without mutating the latter. Process values take precedence.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for dependency maintenance, scope and safety
 boundaries. See [docs/MARKET_DATA.md](docs/MARKET_DATA.md) for the new provider-neutral
-quote/OHLCV/news contracts and data-quality policy. Automatic provider collection
-and indicator calculation are subsequent steps.
+quote/OHLCV/news contracts and data-quality policy. Validated Jupiter and Exa
+adapters are described in [docs/PROVIDERS.md](docs/PROVIDERS.md). Jupiter USD prices
+require a trusted block-time resolver before they qualify as freshness-checked
+quotes. Historical candles, automatic snapshot collection and indicator calculation
+are subsequent steps.
 
 Historical scripts under `experimental/` are separate prototypes,
 not supported trading entry points, and are excluded from the active lint scope.

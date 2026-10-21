@@ -38,7 +38,7 @@ def build_agent_team(
         """Search Exa for current evidence and sources relevant to the research task."""
         try:
             return exa_search(query, settings=settings)
-        except AutoHedgeError:
+        except (AutoHedgeError, ValueError):
             failures.append("exa")
             raise
 

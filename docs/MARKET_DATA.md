@@ -2,7 +2,7 @@
 
 These contracts validate supplied data. They do not fetch it automatically,
 authenticate its provenance, calculate indicators, approve trades or sign orders.
-Provider adapters are the next implementation step. The initial policy assumes
+Jupiter/Exa adapters are documented in [PROVIDERS.md](PROVIDERS.md). The initial policy assumes
 continuous spot markets such as Solana; it is not an exchange-calendar model.
 
 ## Normalized units and identity
@@ -104,8 +104,9 @@ will be implemented in subsequent phases.
 `fetch_candles(CandleRequest)` returns a CandleSeries. Adapters must use
 `validate_candle_response` to check requested identity, interval, count and as_of
 coverage (including the latest completed interval). NewsProvider returns
-timestamped NewsArticle objects. These Protocols
-currently describe interfaces, not implemented live integrations.
+timestamped NewsArticle objects. QuoteProvider and CandleProvider also expose
+those capabilities separately. Jupiter implements quotes only with a trusted
+block-time resolver; Exa implements news. Historical candles remain a later step.
 
 Run the installed-dependency tests:
 
@@ -120,6 +121,6 @@ after a stage makes data stale. Existing runtime and wheel checks remain require
 
 Freshness/shape consistency cannot prove liquidity, sellability, execution price
 or honest provider data. Those checks belong to later provider/risk/execution
-work. Raw Exa tool output is currently separate from a submitted bundle and is
-not covered by its news assessment. No new API or private-key binding is needed
+work. Normalized Exa tool output remains separate from a submitted bundle and
+is not covered by its news assessment. No new API or private-key binding is needed
 to run this phase's tests.

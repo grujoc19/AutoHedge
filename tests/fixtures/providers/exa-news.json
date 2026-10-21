@@ -1,0 +1,13 @@
+{
+  "requestId": "fixture-request",
+  "results": [
+    {
+      "id": "https://news.example/solana",
+      "url": "https://news.example/solana",
+      "title": "Solana market update",
+      "publishedDate": "2026-10-21T11:30:00Z",
+      "text": "Fixture excerpt with market context; not a verified trading claim.",
+      "author": "Fixture author"
+    }
+  ]
+}

@@ -31,6 +31,16 @@ class AgentLifecycleTests(unittest.TestCase):
         with patch("autohedge.workers.Agent", FakeAgent):
             return build_agent_team(settings=Settings(), **kwargs)
 
+    def test_invalid_tool_query_is_recorded_even_if_swallowed(self):
+        team = self.build()
+        tool = team.sentiment.kwargs["tools"][0]
+        with patch(
+            "autohedge.workers.exa_search", side_effect=ValueError("Invalid query")
+        ):
+            with self.assertRaises(ValueError):
+                tool("")
+        self.assertEqual(team.provider_failures, ["exa"])
+
     def test_fresh_roles_and_provider_state_on_every_cycle(self):
         first, second = self.build(), self.build()
         for role in ("director", "quant", "sentiment", "risk"):

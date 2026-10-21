@@ -8,7 +8,6 @@ from autohedge.config import Settings
 from autohedge.errors import ProviderError
 from autohedge.providers import request_json
 from autohedge.tools.exa_search_tool import exa_search
-from autohedge.tools.jupiter_price import get_token_price
 from autohedge.tools.polygon_api import get_ticker_overview
 
 
@@ -25,20 +24,19 @@ class ProviderTests(unittest.TestCase):
             self.assertEqual(request.headers["x-api-key"], "fixture-secret")
             self.assertEqual(request.extensions["timeout"]["read"], 7)
             payload = json.loads(request.content)
-            self.assertEqual(payload["contents"]["context"]["maxCharacters"], 4000)
+            self.assertEqual(payload["contents"]["text"]["maxCharacters"], 4000)
             return httpx.Response(200, json={"results": []})
 
         with httpx.Client(transport=httpx.MockTransport(respond)) as client:
             from autohedge import providers
 
             def local(*args, **kwargs):
-                return providers.request_json(*args, client=client, **kwargs)
+                kwargs["client"] = client
+                return providers.request_json(*args, **kwargs)
 
-            with patch(
-                "autohedge.tools.exa_search_tool.request_json", side_effect=local
-            ):
+            with patch("autohedge.data.exa.request_json", side_effect=local):
                 self.assertEqual(
-                    json.loads(exa_search("query", settings=settings)), {"results": []}
+                    json.loads(exa_search("query", settings=settings))["results"], []
                 )
 
     def test_http_timeout_and_invalid_json_errors_are_safe(self):
@@ -87,17 +85,6 @@ class ProviderTests(unittest.TestCase):
             massive_api_key="massive-fixture",
             massive_base_url="https://stocks.example",
         )
-        with (
-            patch("autohedge.tools.jupiter_price.load_settings", return_value=settings),
-            patch(
-                "autohedge.tools.jupiter_price.request_json",
-                return_value={"mint": {"usdPrice": 10}},
-            ) as request,
-        ):
-            self.assertIn("usdPrice", get_token_price("mint"))
-            self.assertEqual(
-                request.call_args.kwargs["headers"], {"x-api-key": "jupiter-fixture"}
-            )
         with (
             patch("autohedge.tools.polygon_api.load_settings", return_value=settings),
             patch(

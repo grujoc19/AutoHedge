@@ -178,10 +178,29 @@ agents and before/after every role call. A bundle that becomes stale during a
 call aborts the cycle rather than proceeding. Successful reports record the
 actual quality policy, check time, quote age, last candle close, counts and price
 deviation. This is data validation, not risk approval or proof that a provider's
-reported values are true. Raw Exa tool results are not part of that assessment;
-the later news adapter must normalize them into timestamped contracts.
+reported values are true. Normalized Exa tool results remain separate from a
+submitted bundle and are not included in its QualityAssessment.
 
 Configure a per-application policy through
 `Settings(market_quality=QualityPolicy(...))`. Defaults and units, the new Python
 API and explicit limitations are documented in [docs/MARKET_DATA.md](docs/MARKET_DATA.md).
 No API credentials or live endpoints are needed by the added contract/gate tests.
+
+## Phase 2.2: Jupiter and Exa adapters
+
+Jupiter token discovery and price helpers now delegate to a validated adapter;
+Exa sentiment search returns normalized dated news excerpts. The shared HTTP
+transport supports explicit read-only retries (at most two attempts) while
+transaction calls keep one attempt. Decimal JSON prices retain their precision.
+MockTransport fixtures cover schemas, identity, timestamps and failure behavior.
+No additional dependencies were introduced.
+
+Jupiter Price V3 does not supply a price event timestamp: createdAt is token
+creation. PriceObservation therefore has event_time=None; a strict Quote needs
+an injected, trusted block-time resolver and freshness validation. No resolver,
+OHLCV provider or automatic snapshot collector is supplied yet. Exa publication
+dates are provider estimates, and malformed/undated news fail closed. Legacy
+helper paths remain available with normalized subsets rather than raw vendor
+fields; see [docs/PROVIDERS.md](docs/PROVIDERS.md) for the output changes,
+retry semantics, pinned API sources and integration limits. These fixtures do
+not replace authenticated read-only provider contract checks.

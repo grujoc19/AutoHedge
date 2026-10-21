@@ -107,6 +107,46 @@ print(json.dumps({'agents': 4, 'signing_tools': 0}))
 """)
         self.assertIn(json.dumps({"agents": 4, "signing_tools": 0}), output)
 
+    def test_real_sentiment_tool_uses_normalized_news_and_records_schema_failure(self):
+        self.run_offline("""
+import json
+from datetime import datetime, timezone
+from unittest.mock import patch
+import httpx
+from autohedge.config import Settings
+from autohedge.data.exa import ExaNewsProvider
+from autohedge.errors import ProviderError
+from autohedge.workers import build_agent_team
+settings = Settings(exa_api_key='fixture-key')
+now = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
+payload = {'results': [{
+    'id': 'fixture-article', 'url': 'https://news.example/solana',
+    'title': 'Fixture news', 'publishedDate': '2026-10-21T11:30:00Z',
+    'text': 'Untrusted excerpt'
+}]}
+def respond(request):
+    assert request.headers['x-api-key'] == 'fixture-key'
+    assert json.loads(request.content)['contents'] == {'text': {'maxCharacters': 4000}}
+    return httpx.Response(200, json=payload)
+team = build_agent_team(settings=settings)
+tool = next(t for t in team.sentiment.tools if t.__name__ == 'exa_search')
+with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    provider = ExaNewsProvider(settings, client=client, clock=lambda: now)
+    with patch('autohedge.tools.exa_search_tool.ExaNewsProvider', return_value=provider):
+        result = json.loads(tool('Solana news'))
+        assert result['results'][0]['source'] == 'exa.search.news'
+        assert result['results'][0]['published_at'] == '2026-10-21T11:30:00Z'
+        assert not team.provider_failures
+        payload['results'][0].pop('publishedDate')
+        try:
+            tool('Solana news')
+        except ProviderError:
+            pass
+        else:
+            raise AssertionError('Undated news must fail')
+assert team.provider_failures == ['exa']
+""")
+
     def test_complete_cycle_through_real_swarms_with_only_model_responses_replaced(
         self,
     ):
