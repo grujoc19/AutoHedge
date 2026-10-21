@@ -10,7 +10,8 @@ implementiert. [G1.2](MODEL_CONFIGURATION.md) ergänzt Rollen-Konfiguration und
 gezielte Credential-Prüfung; [G1.3](OPENAI_RESEARCH.md) verwendet beide im
 Swarms/OpenAI-Research. [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama am selben
 Vertrag; [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit LiteLLM-Formatierung
-und nativer Antwortprüfung. Gemini und DeepSeek folgen getrennt. Das Modul unterstützt
+und nativer Antwortprüfung. [G1.5b](GEMINI_RESEARCH.md) ergänzt Gemini; DeepSeek
+folgt getrennt. Das Modul unterstützt
 zunächst Textantworten; Tool-Calls, Streaming und multimodale Inhalte sind
 kein Teil dieses Vertrags. Swarms bleibt Runtime; Exa wird vor Sentiment als
 expliziter lesender Abruf außerhalb der Modellgrenze ausgeführt.
@@ -122,6 +123,6 @@ Verträge außerhalb des Checkouts.
 
 G1.2, [Provider-/Modellkonfiguration für alle sechs Rollen](MODEL_CONFIGURATION.md),
 ist implementiert und mit [G1.3](OPENAI_RESEARCH.md) an Swarms/OpenAI angebunden.
-G1.4 bindet Ollama mit denselben Verträgen an, G1.5a Anthropic. Nächster Schritt
-ist G1.5b, Gemini. Das bleiben Research-Aufrufe ohne
+G1.4 bindet Ollama mit denselben Verträgen an, G1.5a Anthropic und G1.5b Gemini.
+Nächste Aufgaben stehen im [Zielabgleich](GOAL_ALIGNMENT.md). Das bleiben Research-Aufrufe ohne
 Handelssignal, Risk-Freigabe oder Ausführungsbefugnis.

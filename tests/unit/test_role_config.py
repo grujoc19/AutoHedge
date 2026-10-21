@@ -336,8 +336,8 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             settings = Settings(
                 openai_api_key="fixture-key",
                 exa_api_key="fixture-exa",
-                gemini_api_key="fixture-gemini",
-                role_models={role: profile("gemini", "unsupported")},
+                deepseek_api_key="fixture-deepseek",
+                role_models={role: profile("deepseek", "unsupported")},
             )
             settings.require_model_credentials(role)
             for configured in (
@@ -400,6 +400,36 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             with self.subTest(model=model), self.assertRaises(ConfigurationError):
                 Settings(
                     role_models={"quant": profile("anthropic", model)}
+                ).require_research_model_configuration()
+
+    def test_gemini_research_uses_only_its_key_and_validates_url_model_names(self):
+        settings = Settings(
+            search_enabled=False,
+            openai_api_key="unrelated",
+            role_models={
+                role: profile("gemini", "gemini/gemini-fixture")
+                for role in (
+                    "quant",
+                    "trading_director",
+                    "news_intelligence",
+                    "risk_manager",
+                )
+            },
+        )
+        with self.assertRaisesRegex(ConfigurationError, "GEMINI_API_KEY"):
+            settings.require_research_credentials()
+        settings.model_copy(
+            update={"gemini_api_key": SecretStr("fixture")}
+        ).require_research_credentials()
+        for model in (
+            "gemini/",
+            "models/gemini-fixture",
+            "model?key=x",
+            "model:streamGenerateContent",
+        ):
+            with self.subTest(model=model), self.assertRaises(ConfigurationError):
+                Settings(
+                    role_models={"quant": profile("gemini", model)}
                 ).require_research_model_configuration()
 
     def test_inactive_future_roles_do_not_require_credentials_for_legacy_research(self):

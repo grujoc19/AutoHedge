@@ -12,7 +12,8 @@ audits. [G1.4](docs/OLLAMA_RESEARCH.md) adds Ollama and mixed local/cloud roles
 without fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) adds Anthropic with LiteLLM
 text formatting and application-owned transport/Usage checks. The bridge now
 preserves bound role system prompts for all providers. Other backends are rejected
-before agent construction. G1.5b, Gemini, is next; DeepSeek follows separately.
+before agent construction. [G1.5b](docs/GEMINI_RESEARCH.md) adds Gemini with native
+finish-reason/usage checks and disabled thinking. G1.5c, DeepSeek, is next.
 
 ## Implemented scope
 

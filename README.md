@@ -104,12 +104,13 @@ provider, model and call limits for all six roles while preserving legacy defaul
 Keys are checked only for the selected backend; local profiles need no cloud key.
 The [Swarms research path](docs/OPENAI_RESEARCH.md) uses these contracts with
 [OpenAI or Ollama per role](docs/OLLAMA_RESEARCH.md) and
-[Anthropic with LiteLLM formatting](docs/ANTHROPIC_RESEARCH.md), five validated
-model calls
+[Anthropic](docs/ANTHROPIC_RESEARCH.md) or [Gemini](docs/GEMINI_RESEARCH.md) with
+LiteLLM text formatting, five validated model calls
 and prompt-free call audits in each report. Fully local research needs no cloud
 key when all four active roles use Ollama and Exa search is disabled. Local
 failures stop the cycle without cloud fallback. Other backends are rejected
-before agent construction; Gemini is next, followed by DeepSeek.
+before agent construction; DeepSeek is next. Gemini currently requires a model
+that supports disabled thinking; see its setup document.
 
 ## Roadmap
 

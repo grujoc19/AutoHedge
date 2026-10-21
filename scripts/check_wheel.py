@@ -94,6 +94,7 @@ from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, co
 from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
 from autohedge.ai.openai import OpenAIProvider
 from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.gemini import GeminiProvider
 from autohedge.ai.ollama import OllamaProvider
 from autohedge.ai.swarms import SwarmsModelBridge
 from autohedge.ai.audit import ModelCallAudit
@@ -137,6 +138,14 @@ anthropic_settings.require_research_credentials()
 anthropic_team = build_agent_team(settings=anthropic_settings)
 for name in ("director", "quant", "sentiment", "risk"):
     assert isinstance(getattr(anthropic_team, name).bridge.provider, AnthropicProvider)
+gemini_settings = Settings(search_enabled=False, gemini_api_key="offline-fixture", role_models={
+    role: {"target": {"provider": "gemini", "model": "gemini-installed-fixture"}}
+    for role in ("quant", "trading_director", "news_intelligence", "risk_manager")
+})
+gemini_settings.require_research_credentials()
+gemini_team = build_agent_team(settings=gemini_settings)
+for name in ("director", "quant", "sentiment", "risk"):
+    assert isinstance(getattr(gemini_team, name).bridge.provider, GeminiProvider)
 system = AutoHedge(output_dir='outputs')
 system.conversation.add(role='user', content='installed wheel check')
 assert 'installed wheel check' in str(system.conversation.return_messages_as_list())

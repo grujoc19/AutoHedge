@@ -1,11 +1,19 @@
 """Immutable role profiles; configuration does not activate a model provider."""
 
 from enum import Enum
+import re
 
 from pydantic import model_validator
 
 from autohedge.ai.contracts import ModelTarget, OutputTokenLimit, Seconds
 from autohedge.contracts import Contract
+
+
+def native_gemini_model(model: str) -> str:
+    native = model.removeprefix("gemini/")
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}", native) is None:
+        raise ValueError("Invalid native Gemini model identifier")
+    return native
 
 
 class AgentRole(str, Enum):

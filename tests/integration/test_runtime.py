@@ -494,6 +494,141 @@ for failure in ('auth','rate_limit','overloaded','timeout','bad_json','refusal',
     assert len(calls)==2, (failure,len(calls))
 """)
 
+    def test_public_gemini_and_four_backend_research_preserve_prompts_usage_and_caps(
+        self,
+    ):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime, timezone
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.gemini import GeminiProvider
+from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.ollama import OllamaProvider
+from autohedge.config import Settings
+roles=('trading_director','quant','news_intelligence','risk_manager')
+now=datetime(2026,10,21,12,tzinfo=timezone.utc)
+for mixed in (False,True):
+    backends=('gemini','anthropic','openai','ollama') if mixed else ('gemini',)*4
+    profiles={role:{'target':{'provider':backend,'model':('gemini/' if backend=='gemini' else '')+'gemini-'+role},
+        'max_output_tokens':100+i,'timeout_seconds':7+i} for i,(role,backend) in enumerate(zip(roles,backends))}
+    settings=Settings(role_models=profiles,search_enabled=False,gemini_api_key='fixture-gemini',
+        openai_api_key='fixture-openai' if mixed else None,anthropic_api_key='fixture-anthropic' if mixed else None)
+    settings.require_research_credentials()
+    calls=[]
+    def respond(request):
+        body=json.loads(request.content)
+        calls.append((request,body))
+        assert not body.get('tools')
+        if request.url.host=='generativelanguage.googleapis.com':
+            assert request.headers['x-goog-api-key']=='fixture-gemini'
+            assert 'authorization' not in request.headers and 'x-api-key' not in request.headers
+            assert not request.url.query
+            model=request.url.path.split('/models/')[1].removesuffix(':generateContent')
+            assert model.startswith('gemini-')
+            assert 'This is research only.' in body['systemInstruction']['parts'][0]['text']
+            assert body['generationConfig']['candidateCount']==1
+            assert body['generationConfig']['thinkingConfig']=={'thinkingBudget':0,'includeThoughts':False}
+            usage={'promptTokenCount':10,'candidatesTokenCount':2,'totalTokenCount':12,'cachedContentTokenCount':3}
+            if model.endswith('risk_manager'):
+                usage.pop('totalTokenCount')
+            return httpx.Response(200,json={'modelVersion':model+'-revision',
+                'candidates':[{'finishReason':'STOP','content':{'role':'model','parts':[{'text':'offline Gemini evidence'}]}}],
+                'usageMetadata':usage})
+        if request.url.host=='api.anthropic.com':
+            assert mixed and request.headers['x-api-key']=='fixture-anthropic'
+            return httpx.Response(200,json={'type':'message','role':'assistant','model':body['model'],
+                'stop_reason':'end_turn','content':[{'type':'text','text':'offline Anthropic evidence'}],
+                'usage':{'input_tokens':10,'output_tokens':2,'cache_creation_input_tokens':0,'cache_read_input_tokens':0}})
+        if request.url.host=='api.openai.com':
+            assert mixed and request.headers['authorization']=='Bearer fixture-openai'
+            return httpx.Response(200,json={'model':body['model'],'choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline OpenAI evidence'}}],
+                'usage':{'prompt_tokens':10,'completion_tokens':2}})
+        assert mixed and request.url.host=='127.0.0.1'
+        assert 'authorization' not in request.headers and 'x-goog-api-key' not in request.headers
+        return httpx.Response(200,json={'model':body['model'],'done':True,'done_reason':'stop',
+            'message':{'role':'assistant','content':'offline local evidence'},'prompt_eval_count':10,'eval_count':2})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client, tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.GeminiProvider',side_effect=lambda settings:GeminiProvider(settings,client=client)), patch(
+            'autohedge.workers.AnthropicProvider',side_effect=lambda settings:AnthropicProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+            'autohedge.workers.OllamaProvider',side_effect=lambda settings:OllamaProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory,clock=lambda:now)
+            report=engine.run_report('Supplied frozen evidence')
+    assert len(calls)==5
+    for stage,(sent,body),role in zip(report.stages,calls,(roles[0],roles[1],roles[2],roles[3],roles[0])):
+        audit,=stage.model_calls
+        config=settings.model_for(role)
+        assert audit.role.value==role and audit.target==config.target
+        assert audit.timeout_seconds==config.timeout_seconds==sent.extensions['timeout']['read']
+        assert audit.max_output_tokens==config.max_output_tokens
+        if config.target.provider=='gemini':
+            assert body['generationConfig']['maxOutputTokens']==config.max_output_tokens
+            assert audit.resolved_model==config.target.model.removeprefix('gemini/')+'-revision'
+            assert audit.usage.input_tokens==10
+            assert audit.usage.output_tokens==(None if role=='risk_manager' else 2)
+        else:
+            assert audit.usage.total_tokens==12
+    assert len({stage.model_calls[0].request_id for stage in report.stages})==5
+    assert report.execution_enabled is False
+""")
+
+    def test_rejected_gemini_quant_never_retries_or_falls_back_to_another_backend(self):
+        self.run_offline("""
+import tempfile
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.gemini import GeminiProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.config import Settings
+from autohedge.errors import ResearchError
+settings=Settings(openai_api_key='fixture-openai',gemini_api_key='fixture-gemini',search_enabled=False,
+    role_models={'quant':{'target':{'provider':'gemini','model':'gemini-fixture'},'max_output_tokens':100}})
+for failure in ('auth','rate_limit','timeout','unavailable','bad_json','blocked_prompt','MAX_TOKENS','SAFETY','NEW_REASON','tool_call','thinking','overrun'):
+    calls=[]
+    def respond(request):
+        calls.append(request)
+        if request.url.host=='api.openai.com':
+            assert len(calls)==1, 'No fallback or downstream call is allowed'
+            return httpx.Response(200,json={'model':'fixture','choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline thesis'}}]})
+        assert request.url.host=='generativelanguage.googleapis.com'
+        if failure in ('auth','rate_limit'):
+            return httpx.Response(403 if failure=='auth' else 429,text='private-body')
+        if failure=='timeout':
+            raise httpx.ReadTimeout('private-body')
+        if failure=='unavailable':
+            raise httpx.ConnectError('private-body')
+        if failure=='bad_json':
+            return httpx.Response(200,text='private-body')
+        if failure=='blocked_prompt':
+            return httpx.Response(200,json={'promptFeedback':{'blockReason':'SAFETY'}})
+        reason=failure if failure in ('MAX_TOKENS','SAFETY','NEW_REASON') else 'STOP'
+        parts=[{'functionCall':{'name':'execute_trade'}}] if failure=='tool_call' else [{'text':'private-body'}]
+        if failure=='thinking':
+            parts[0]['thought']=True
+        return httpx.Response(200,json={'modelVersion':'fixture','candidates':[
+            {'finishReason':reason,'content':{'role':'model','parts':parts}}],
+            'usageMetadata':{'promptTokenCount':10,'candidatesTokenCount':101 if failure=='overrun' else 2}})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client, tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.GeminiProvider',side_effect=lambda settings:GeminiProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory)
+            try:
+                engine.run_report('Offline failing research')
+            except ResearchError as error:
+                assert error.stage=='quant' and 'private-body' not in str(error)
+            else:
+                raise AssertionError('Rejected Gemini response must stop the cycle')
+            assert engine.last_report is None
+    assert len(calls)==2, (failure,len(calls))
+""")
+
     def test_real_agents_conversation_and_tool_schemas(self):
         output = self.run_offline("""
 import json

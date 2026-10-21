@@ -80,5 +80,6 @@ Läufe mit gesperrten Sockets und MockTransport prüfen Anthropic allein sowie d
 gemischte Backends und Audits. Der Wheel-Test importiert den Adapter ohne
 Modell-SDK und baut anschließend ein Anthropic-Team ohne Netzwerkzugriff auf.
 
-Nächster Schritt: **G1.5b, Gemini**, danach DeepSeek separat. Budgets, persistente
+Gemini ist inzwischen ebenfalls angebunden; nächste Schritte stehen im
+[Zielabgleich](GOAL_ALIGNMENT.md). Budgets, persistente
 Fehler-Audits, strukturierte Intelligence-Rollen und Handelsausführung fehlen noch.

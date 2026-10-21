@@ -41,9 +41,9 @@ class RunLifecycleTests(unittest.TestCase):
         self,
     ):
         settings = Settings(
-            gemini_api_key="fixture-gemini",
+            deepseek_api_key="fixture-deepseek",
             role_models={
-                "quant": {"target": {"provider": "gemini", "model": "unsupported"}}
+                "quant": {"target": {"provider": "deepseek", "model": "unsupported"}}
             },
         )
         settings.require_model_credentials("quant")

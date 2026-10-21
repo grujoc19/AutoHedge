@@ -7,6 +7,7 @@ from swarms import Agent
 
 from autohedge.ai.client import utc_now
 from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.gemini import GeminiProvider
 from autohedge.ai.config import AgentRole
 from autohedge.ai.openai import OpenAIProvider
 from autohedge.ai.ollama import OllamaProvider
@@ -81,6 +82,7 @@ def build_agent_team(
                 "openai": OpenAIProvider,
                 "ollama": OllamaProvider,
                 "anthropic": AnthropicProvider,
+                "gemini": GeminiProvider,
             }[config.target.provider](settings)
         )
         bridge = SwarmsModelBridge(

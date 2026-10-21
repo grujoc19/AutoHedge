@@ -16,8 +16,9 @@ Metadaten-Audit und Exa als expliziter lesender Abruf ohne Agenten-Tools.
 [G1.4](docs/OLLAMA_RESEARCH.md) ergänzt Ollama und gemischte lokale/Cloud-Rollen
 ohne Fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit LiteLLM-
 Formatierung und nativer Usage-Prüfung; außerdem bleiben Rollen-Systemprompts
-jetzt an der Modellgrenze erhalten. Nächste Arbeit ist **G1.5b: Gemini**,
-danach DeepSeek separat. Danach folgen
+jetzt an der Modellgrenze erhalten. [G1.5b](docs/GEMINI_RESEARCH.md) ergänzt
+Gemini mit kontrolliertem Text-/Usage-Vertrag und deaktiviertem Thinking.
+Nächste Arbeit ist **G1.5c: DeepSeek**. Danach folgen
 persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
@@ -275,7 +276,8 @@ G1.3 bindet den Swarms/OpenAI-Pfad inzwischen an die Modellgrenze an; vorhandene
 Lifecycle-/Snapshot-/Fehlertests bestehen. G1.4 ergänzt den nativen Ollama-Adapter
 mit denselben Verträgen, vollständig lokalen oder gemischten Rollen und
 Fehlerabbrüchen ohne Cloud-Fallback. G1.5a ergänzt Anthropic und behebt die
-Systemprompt-Übergabe für alle Backends. Als Nächstes folgt G1.5b, Gemini, danach
+Systemprompt-Übergabe für alle Backends. G1.5b ergänzt Gemini, einschließlich
+Fehlerabbrüchen und Tests für vier gemischte Anbieter. Als Nächstes folgt G1.5c,
 DeepSeek in einem getrennten Schritt.
 Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
