@@ -7,14 +7,14 @@ geladen. Die [G1.1-Modellverträge](MODEL_CALLS.md) können aufgelöste Profile 
 als Request-Parameter verwenden. Keine neuen Pakete, Provider-SDKs oder Modelle
 werden dafür geladen oder aufgerufen.
 
-**Konfiguration ist noch keine Provider-Anbindung.** Der bisherige Swarms-Pfad
-verwendet weiterhin die zwei alten Modellvariablen. Wenn ein explizites Profil
-eine seiner vier aktiven Rollen betrifft, wird er vor Agentenkonstruktion mit
-`ConfigurationError` gestoppt. Das gilt auch für ein neues OpenAI-Profil. So wird
-eine Einstellung weder ignoriert noch versehentlich mit dem falschen Modell
-ausgeführt. Die kontrollierte Migration erfolgt in G1.3; Ollama und weitere
-Cloud-Adapter folgen in G1.4/G1.5. Endpunkte und SDK-spezifische Parameter werden
-mit den jeweiligen Adaptern ergänzt.
+**G1.3 ist inzwischen implementiert:** Der [Swarms/OpenAI-Pfad](OPENAI_RESEARCH.md)
+verwendet die Profile seiner vier aktiven Rollen, einschließlich Modell, Limits
+und Timeout. Ohne Profil bleiben die zwei alten Modellvariablen Fallbacks.
+Andere aktive Backends werden vor Agentenkonstruktion mit `ConfigurationError`
+abgewiesen; kein Profil wird ignoriert oder still durch OpenAI ersetzt. Ollama
+und weitere Cloud-Adapter folgen in G1.4/G1.5. OpenAI-Endpunkt:
+`AUTOHEDGE_OPENAI_BASE_URL`, Default `https://api.openai.com/v1`, nur HTTPS ohne
+eingebettete Credentials, Query oder Fragment.
 
 ## Rollen, Variablen und Defaults
 
@@ -56,7 +56,7 @@ Vertippte Rollenpräfixe mit diesen Suffixen sowie unbekannte Einstellungen unte
 einem bekannten Rollenpräfix werden abgelehnt, statt kostenpflichtige Defaults
 zu verwenden. Andere Umgebungsvariablen bleiben außerhalb dieser Konfiguration.
 
-Beispiel für ein lokales News-Profil (vorerst nur über die Konfigurations-API nutzbar):
+Beispiel für ein lokales News-Profil (bis G1.4 nur über die Konfigurations-API nutzbar):
 
 ```dotenv
 AUTOHEDGE_NEWS_INTELLIGENCE_PROVIDER=ollama
@@ -113,8 +113,8 @@ die Modellschlüssel-API und ihre eigenen SDK-Verträge.
 
 Exa ist ein separater Datenanbieter. Lokale Modellkonfiguration verlangt keinen
 Exa-Key; der bisherige Research benötigt bei aktivierter Suche weiterhin Exa und
-für seine alten Modelle OpenAI. Rollenprofile im unmigrierten Standardpfad lösen
-zuerst die oben beschriebene Ablehnung aus und keinen unerwarteten Modellaufruf.
+für seine OpenAI-Modelle OpenAI. Nicht unterstützte aktive Backends lösen zuerst
+die oben beschriebene Ablehnung aus und keinen unerwarteten Modellaufruf.
 
 ## Verwendung im Anwendungscode
 
@@ -146,5 +146,6 @@ löst sechs lokale Profile auf und führt damit nur einen geskripteten Testadapt
 aus; Swarms und Modell-SDKs werden dabei nicht geladen. Der installierte Wheel
 wird zusätzlich außerhalb des Checkouts geprüft.
 
-Nächster Schritt: **G1.3**, den bestehenden Swarms/OpenAI-Pfad unter Beibehaltung
-seiner Lifecycle-/Snapshot-/Fehlertests kontrolliert an die Modellgrenze anbinden.
+Die [G1.3-Anbindung](OPENAI_RESEARCH.md) ist umgesetzt. Nächster Schritt:
+**G1.4**, Ollama als echten Adapter ergänzen; die lokalen Profile allein starten
+weiterhin kein Modell.

@@ -7,8 +7,9 @@ stabilized into a modular trading system in small, independently tested steps.
 Director thesis -> Quant -> Sentiment -> Risk -> Director synthesis. Each stage
 receives the preceding results and returns bounded research text. It does not execute trades, enforce portfolio
 risk limits, or provide an integrated paper-trading engine. Market-data and
-Solana swap helpers exist separately; only Exa search is currently attached to
-the research agents. Numerical model output is not a verified market signal.
+Solana swap helpers exist separately. Exa news is collected once before Sentiment
+when exploration search is enabled; agents have no tools. Numerical model output
+is not a verified market signal.
 
 ## Development setup
 
@@ -101,9 +102,10 @@ known/partial/unknown token usage. Its call boundary performs no retries or
 fallbacks. Immutable [role profiles](docs/MODEL_CONFIGURATION.md) now configure
 provider, model and call limits for all six roles while preserving legacy defaults.
 Keys are checked only for the selected backend; local profiles need no cloud key.
-Actual adapters and research migration come next. Active-role overrides currently
-stop the unmigrated research path before agent construction; no setting is silently
-ignored and no model route has changed yet.
+The [Swarms/OpenAI path](docs/OPENAI_RESEARCH.md) now uses these contracts and
+OpenAI role profiles, with five validated model calls and prompt-free call audits
+in each report. Unsupported backends are rejected before agent construction;
+Ollama and further cloud adapters are next.
 
 ## Roadmap
 

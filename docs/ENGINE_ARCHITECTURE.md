@@ -38,11 +38,14 @@ Ollama-Modelle unterstützen und über LiteLLM erweiterbar sein. Provider, Model
 und Einstellungen sind je Rolle über zentrale Konfiguration wählbar. Die
 vorhandene transitive LiteLLM-Abhängigkeit und zwei Modellnamen erfüllen das
 noch nicht. [G1.1](MODEL_CALLS.md) implementiert bereits SDK-unabhängige Verträge,
-Usage-Ungewissheit und validierte Einmalaufrufe; die Research-Anbindung fehlt noch.
+Usage-Ungewissheit und validierte Einmalaufrufe.
 [G1.2](MODEL_CONFIGURATION.md) ergänzt unveränderliche Rollenprofile und
-Credential-Auswahl; lokale Profile benötigen keinen OpenAI-Key. Vor ihrer Nutzung
-im Research muss G1.3 den Swarms/OpenAI-Pfad migrieren. Bis dahin werden explizite
-Profile aktiver Research-Rollen vor Agentenkonstruktion abgewiesen.
+Credential-Auswahl; lokale Profile benötigen keinen OpenAI-Key.
+[G1.3](OPENAI_RESEARCH.md) verwendet OpenAI-Profile jetzt im bestehenden Swarms-
+Research, mit kontrolliertem HTTP-Transport, fünf Modellaufrufen und Stufen-Audit.
+Exa wird bei erlaubter Exploration vor Sentiment lesend abgerufen; die SDK-Agenten
+haben keine Tools. Ollama und weitere Cloud-Adapter fehlen noch; nicht unterstützte
+aktive Backends werden vor Agentenkonstruktion abgewiesen.
 
 ## Datenfluss und feste Ausführungsgrenze
 
@@ -216,7 +219,7 @@ Legacy-Referenzen und werden dort auf die sieben neuen Phasen abgebildet.
 
 | Zielphase | Nächste Aufgaben | Wiederverwendung |
 | --- | --- | --- |
-| G1 Foundation | Providervertrag und sechs Rollenkonfigurationen umgesetzt; als Nächstes Swarms-Brücke, danach lokale/Cloud-Adapter | Settings, gemeinsame Fehler, Lifecycle-Tests |
+| G1 Foundation | Providervertrag, Rollenprofile und Swarms/OpenAI-Brücke umgesetzt; als Nächstes Ollama, danach weitere Cloud-Adapter | Settings, gemeinsame Fehler, Lifecycle-Tests |
 | G2 Data Collection | Ereignisspeicher, RSS, Binance und DEX Screener, weitere Quellen einzeln | Datenverträge, HTTP-Transport, HistoryStore und Snapshot |
 | G3 Market Intelligence | Budgets/Cache, News-Klassifikation, statistische Anomalien, später lokale ML | Indikatoren, Sentiment-/Exa-Kern, Qualitätsregeln |
 | G4 On-Chain Intelligence | RPC/Helius, Ereignisklassifikation und Python-Muster | Solana-Identität, Zeit-/Evidenzverträge |

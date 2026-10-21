@@ -51,7 +51,7 @@ class RunLifecycleTests(unittest.TestCase):
             patch("autohedge.workers.build_agent_team") as factory,
         ):
             system = AutoHedge(output_dir=directory, settings=settings)
-            with self.assertRaisesRegex(ConfigurationError, "Role-specific"):
+            with self.assertRaisesRegex(ConfigurationError, "not implemented"):
                 system.run_report("research")
             factory.assert_not_called()
             self.assertIsNone(system.last_report)

@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BeforeValidator, Field, model_validator
 
+from autohedge.ai.audit import ModelCallAudit
+from autohedge.ai.config import AgentRole
 from autohedge.contracts import Amount as Amount, PositiveAmount as PositiveAmount
 from autohedge.contracts import Contract as Contract, Instrument as Instrument
 from autohedge.contracts import Text as Text, reject_bool as reject_bool
@@ -108,11 +110,28 @@ class StageResult(Contract):
     content: Text
     started_at: AwareDatetime
     completed_at: AwareDatetime
+    model_calls: Annotated[tuple[ModelCallAudit, ...], Field(max_length=1)] = ()
 
     @model_validator(mode="after")
     def ordered_times(self):
         if self.completed_at < self.started_at:
             raise ValueError("Stage completed before it started")
+        role = {
+            Stage.THESIS: AgentRole.TRADING_DIRECTOR,
+            Stage.QUANT: AgentRole.QUANT,
+            Stage.SENTIMENT: AgentRole.NEWS_INTELLIGENCE,
+            Stage.RISK: AgentRole.RISK_MANAGER,
+            Stage.SYNTHESIS: AgentRole.TRADING_DIRECTOR,
+        }[self.stage]
+        for call in self.model_calls:
+            if (
+                call.role != role
+                or not self.started_at
+                <= call.started_at
+                <= call.completed_at
+                <= self.completed_at
+            ):
+                raise ValueError("Model call does not belong to this stage")
         return self
 
 
@@ -150,6 +169,9 @@ class ResearchReport(Contract):
         if self.completed_at < self.started_at:
             raise ValueError("Research completed before it started")
         previous = self.started_at
+        ids = [call.request_id for stage in self.stages for call in stage.model_calls]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Model-call IDs must be unique within a report")
         for stage in self.stages:
             if stage.started_at < previous or stage.completed_at > self.completed_at:
                 raise ValueError("Stage is outside the ordered research timeline")

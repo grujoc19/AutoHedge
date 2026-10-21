@@ -1,9 +1,14 @@
 """Fresh Swarms role adapters; sequencing belongs to the orchestrator."""
 
 from datetime import datetime, timezone
+import time
 
 from swarms import Agent
 
+from autohedge.ai.client import utc_now
+from autohedge.ai.config import AgentRole
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.swarms import SwarmsModelBridge, SwarmsResearchAgent
 from autohedge.config import Settings, load_settings
 from autohedge.errors import AutoHedgeError
 from autohedge.orchestration import AgentTeam
@@ -17,10 +22,15 @@ from autohedge.tools.exa_search_tool import exa_search
 
 
 def build_agent_team(
-    now: datetime | None = None, *, settings: Settings | None = None
+    now: datetime | None = None,
+    *,
+    settings: Settings | None = None,
+    clock=utc_now,
+    monotonic=time.monotonic,
+    provider_factory=None,
 ) -> AgentTeam:
     settings = settings if settings is not None else load_settings()
-    settings.require_legacy_model_configuration()
+    settings.require_research_model_configuration()
     now = now if now is not None else datetime.now(timezone.utc)
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("Agent timestamps must be timezone-aware")
@@ -53,42 +63,51 @@ def build_agent_team(
         retry_attempts=1,
         tool_retry_attempts=1,
         context_length=16000,
-        max_tokens=1500,
         context_compression=False,
         dynamic_context_window=False,
-        llm_args={"timeout": settings.request_timeout, "num_retries": 0},
-        llm_api_key=settings.openai_api_key.get_secret_value()
-        if settings.openai_api_key
-        else None,
+        fallback_models=[],
+        streaming_on=False,
+        stream=False,
     )
 
-    def create(name, prompt, *, model=None, tools=None, loops=1):
-        return Agent(
+    def create(name, prompt, role, *, news_search=None):
+        config = settings.model_for(role)
+        provider = (
+            provider_factory(role, config)
+            if provider_factory is not None
+            else OpenAIProvider(settings)
+        )
+        bridge = SwarmsModelBridge(provider, config, clock=clock, monotonic=monotonic)
+        agent = Agent(
             agent_name=name,
             system_prompt=prompt + suffix,
-            model_name=model or settings.model,
-            tools=tools,
-            max_loops=loops,
+            model_name=config.target.model,
+            llm=bridge,
+            max_tokens=config.max_output_tokens,
+            tools=None,
+            max_loops=1,
             **common,
         )
+        return SwarmsResearchAgent(agent, bridge, role, search=news_search)
 
     return AgentTeam(
-        director=create("Trading-Director", DIRECTOR_PROMPT),
-        quant=create("Quant-Analyst", QUANT_PROMPT),
+        director=create(
+            "Trading-Director", DIRECTOR_PROMPT, AgentRole.TRADING_DIRECTOR
+        ),
+        quant=create("Quant-Analyst", QUANT_PROMPT, AgentRole.QUANT),
         sentiment=create(
             "Sentiment-Agent",
             SENTIMENT_PROMPT,
-            model=settings.sentiment_model,
-            loops=2 if settings.search_enabled else 1,
-            tools=[search] if settings.search_enabled else None,
+            AgentRole.NEWS_INTELLIGENCE,
+            news_search=search if settings.search_enabled else None,
         ),
-        risk=create("Risk-Manager", RISK_PROMPT),
+        risk=create("Risk-Manager", RISK_PROMPT, AgentRole.RISK_MANAGER),
         provider_failures=failures,
     )
 
 
 def build_director_agent(
     now: datetime | None = None, *, settings: Settings | None = None
-) -> Agent:
-    """Compatibility factory for a standalone Director; use AutoHedge for a full cycle."""
+) -> SwarmsResearchAgent:
+    """Standalone validated Director runner; its real Swarms instance is .agent."""
     return build_agent_team(now, settings=settings).director

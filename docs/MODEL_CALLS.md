@@ -7,11 +7,11 @@ Netzwerkaufrufe aus. Es wurden keine neuen Abhängigkeiten hinzugefügt.
 
 **Stand:** Verträge, validierte Aufrufgrenze und ein geskripteter Test-Fake sind
 implementiert. [G1.2](MODEL_CONFIGURATION.md) ergänzt Rollen-Konfiguration und
-gezielte Credential-Prüfung; echte Adapter und Research-Anbindung folgen in G1.3–G1.5. Die bestehenden
-Research-Agenten verwenden diesen Pfad noch nicht. Das Modul unterstützt
+gezielte Credential-Prüfung; [G1.3](OPENAI_RESEARCH.md) verwendet beide im
+Swarms/OpenAI-Research. Weitere Backends folgen in G1.4/G1.5. Das Modul unterstützt
 zunächst Textantworten; Tool-Calls, Streaming und multimodale Inhalte sind
-kein Teil dieses Vertrags. Der bestehende Exa-/Swarms-Pfad bleibt erhalten;
-seine Migration muss lesende Recherche separat berücksichtigen.
+kein Teil dieses Vertrags. Swarms bleibt Runtime; Exa wird vor Sentiment als
+expliziter lesender Abruf außerhalb der Modellgrenze ausgeführt.
 
 ## Verträge
 
@@ -119,6 +119,6 @@ Verträge außerhalb des Checkouts.
 ```
 
 G1.2, [Provider-/Modellkonfiguration für alle sechs Rollen](MODEL_CONFIGURATION.md),
-ist inzwischen implementiert. Nächster Schritt ist G1.3, die kontrollierte
-Swarms/OpenAI-Anbindung. Modellverträge und Profile allein ändern keine
-Handelsentscheidung oder Agentenberechtigung und aktivieren keine entfernten Modelle.
+ist implementiert und mit [G1.3](OPENAI_RESEARCH.md) an Swarms/OpenAI angebunden.
+Nächster Schritt ist G1.4, der Ollama-Adapter. Das bleiben Research-Aufrufe ohne
+Handelssignal, Risk-Freigabe oder Ausführungsbefugnis.

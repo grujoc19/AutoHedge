@@ -160,7 +160,7 @@ assert provider.calls == 6
 try:
     settings.require_research_credentials()
 except ConfigurationError as error:
-    assert 'Role-specific' in str(error)
+    assert 'not implemented' in str(error)
 else:
     raise AssertionError('Legacy research must not ignore role profiles')
 assert dict(os.environ) == before
@@ -169,6 +169,90 @@ for module in ('swarms', 'litellm', 'openai', 'anthropic', 'solders'):
 print('Role configuration and offline gateway passed')
 """)
         self.assertIn("Role configuration and offline gateway passed", output)
+
+    def test_public_openai_pipeline_uses_profiles_and_one_read_only_news_lookup(self):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime, timezone
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.config import Settings
+from autohedge.data.exa import ExaNewsProvider
+now=datetime(2026,10,21,12,tzinfo=timezone.utc)
+settings=Settings(openai_api_key='fixture-model-key',exa_api_key='fixture-news-key',role_models={
+    'quant':{'target':{'provider':'openai','model':'gpt-4.1-quant'},'max_output_tokens':100,'timeout_seconds':7}})
+models=[]
+queries=[]
+def respond(request):
+    body=json.loads(request.content)
+    if request.url.host=='api.exa.ai':
+        queries.append(body['query'])
+        assert request.headers['x-api-key']=='fixture-news-key'
+        return httpx.Response(200,json={'results':[{'id':'story','url':'https://news.example/story',
+            'title':'Fixture news','publishedDate':'2026-10-21T11:55:00Z','text':'Untrusted excerpt'}]})
+    assert request.url.host=='api.openai.com'
+    assert request.headers['authorization']=='Bearer fixture-model-key'
+    assert not body.get('tools')
+    models.append(body)
+    return httpx.Response(200,json={'model':body['model']+'-fixture','choices':[{'index':0,'finish_reason':'stop',
+        'message':{'role':'assistant','content':'offline research '+body['model']}}],
+        'usage':{'prompt_tokens':10,'completion_tokens':2}})
+with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+            'autohedge.tools.exa_search_tool.ExaNewsProvider',return_value=ExaNewsProvider(settings,client=client,clock=lambda:now)):
+            engine=AutoHedge(settings=settings,output_dir=directory,output_file_path='report.json',clock=lambda:now)
+            report=engine.run_report('Public offline research')
+assert len(models)==5
+assert queries==['Public offline research']
+assert models[1]['model']=='gpt-4.1-quant'
+assert models[1]['max_completion_tokens']==100
+assert all(len(stage.model_calls)==1 for stage in report.stages)
+assert len({stage.model_calls[0].request_id for stage in report.stages})==5
+assert all(stage.model_calls[0].usage.total_tokens==12 for stage in report.stages)
+sentiment=json.loads(models[2]['messages'][-1]['content'])
+assert sentiment['supplemental_news']['results'][0]['source']=='exa.search.news'
+for sent in models:
+    for message in sent['messages']:
+        if message['role']=='user':
+            data=json.loads(message['content'])
+            assert all('model_calls' not in prior for prior in data.get('previous_results',[]))
+assert report.execution_enabled is False
+""")
+
+    def test_real_swarms_stops_after_first_rejected_openai_response(self):
+        self.run_offline("""
+import tempfile
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.config import Settings
+from autohedge.errors import ResearchError
+for status,reason in ((429,'stop'),(200,'length'),(200,'content_filter'),(200,'tool_calls')):
+    requests=[]
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(status,json={'model':'fixture','choices':[{'index':0,'finish_reason':reason,
+            'message':{'role':'assistant','content':'private rejected output'}}],
+            'usage':{'prompt_tokens':10,'completion_tokens':2}})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)):
+                engine=AutoHedge(output_dir=directory,settings=Settings(openai_api_key='fixture',search_enabled=False))
+                try:
+                    engine.run_report('offline failing research')
+                except ResearchError as error:
+                    assert error.stage=='thesis'
+                    assert 'private rejected output' not in str(error)
+                else:
+                    raise AssertionError('Rejected response must stop the research cycle')
+                assert engine.last_report is None
+    assert len(requests)==1, len(requests)
+""")
 
     def test_real_agents_conversation_and_tool_schemas(self):
         output = self.run_offline("""
@@ -182,15 +266,15 @@ first = build_agent_team(now=datetime(2026, 10, 20, 8, 45, tzinfo=timezone.utc))
 second = build_agent_team()
 assert first is not second
 for role in ('director', 'quant', 'sentiment', 'risk'):
-    a, b = getattr(first, role), getattr(second, role)
+    a, b = getattr(first, role).agent, getattr(second, role).agent
     assert a is not b
     assert a.short_memory is not b.short_memory
     assert not a.handoffs
     assert not a.print_on
-assert 'October 20, 2026 at 08:45 UTC' in first.director.system_prompt
-assert any(s['function']['name'] == 'exa_search' for s in first.sentiment.tools_list_dictionary)
+assert 'October 20, 2026 at 08:45 UTC' in first.director.agent.system_prompt
+assert first.sentiment.search.__name__ == 'exa_search'
 assert 'autohedge.tools.ultra_tools' not in sys.modules
-for a in (first.director, first.quant, first.sentiment, first.risk):
+for a in (first.director.agent, first.quant.agent, first.sentiment.agent, first.risk.agent):
     assert not any(getattr(t, '__name__', '') in ('execute_trade', 'get_order') for t in a.tools or [])
 with tempfile.TemporaryDirectory() as output_dir:
     system = AutoHedge(output_dir=output_dir)
@@ -222,7 +306,7 @@ def respond(request):
     assert json.loads(request.content)['contents'] == {'text': {'maxCharacters': 4000}}
     return httpx.Response(200, json=payload)
 team = build_agent_team(settings=settings)
-tool = next(t for t in team.sentiment.tools if t.__name__ == 'exa_search')
+tool = team.sentiment.search
 with httpx.Client(transport=httpx.MockTransport(respond)) as client:
     provider = ExaNewsProvider(settings, client=client, clock=lambda: now)
     with patch('autohedge.tools.exa_search_tool.ExaNewsProvider', return_value=provider):
@@ -281,15 +365,19 @@ def respond(request):
         'data': {'id': 'fixture', 'type': 'ohlcv_request_response', 'attributes': {'ohlcv_list': rows}},
         'meta': {'base': {'address': mint}},
     })
+from autohedge.ai import ModelReply, TokenUsage
 calls = []
+class Provider:
+    def __init__(self, role): self.role = role
+    def complete(self, request):
+        role = {'trading_director':'director','quant':'quant','news_intelligence':'sentiment','risk_manager':'risk'}[self.role.value]
+        calls.append(role)
+        return ModelReply(request_id=request.request_id, target=request.target,
+            finish_reason='complete', content='Offline research with supplied data: ' + role,
+            usage=TokenUsage(status='unknown'))
 def factory(clock):
-    team = build_agent_team(clock, settings=settings)
-    for role in ('director', 'quant', 'sentiment', 'risk'):
-        def response(*args, _role=role, **kwargs):
-            calls.append(_role)
-            return 'Offline research with supplied data: ' + _role
-        getattr(team, role).call_llm = response
-    return team
+    return build_agent_team(clock, settings=settings, clock=lambda:now,
+        provider_factory=lambda role, config: Provider(role))
 with tempfile.TemporaryDirectory() as directory:
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         frozen = collect_research_snapshot(
@@ -333,12 +421,12 @@ assert report.execution_enabled is False
 # The public default path must create real SDK agents with search tools disabled,
 # even when the application's legacy exploration setting permits live search.
 routes = []
-def offline_default_factory(when, *, settings):
+def offline_default_factory(when, *, settings, **options):
     routes.append(settings.search_enabled)
-    team = build_agent_team(when, settings=settings)
-    assert not team.sentiment.tools
-    for role in ('director', 'quant', 'sentiment', 'risk'):
-        getattr(team, role).call_llm = lambda *args, **kwargs: 'Offline frozen-snapshot research'
+    team = build_agent_team(when, settings=settings,
+        provider_factory=lambda role, config:Provider(role), **options)
+    assert team.sentiment.search is None
+    assert not team.sentiment.agent.tools
     return team
 with tempfile.TemporaryDirectory() as directory:
     with patch('autohedge.workers.build_agent_team', side_effect=offline_default_factory):
@@ -360,16 +448,17 @@ from autohedge import AutoHedge
 from autohedge.config import Settings
 from autohedge.workers import build_agent_team
 settings = Settings(search_enabled=False)
+from autohedge.ai import ModelReply, TokenUsage
 calls = []
+class Provider:
+    def __init__(self, role): self.role=role
+    def complete(self, request):
+        role={'trading_director':'director','quant':'quant','news_intelligence':'sentiment','risk_manager':'risk'}[self.role.value]
+        calls.append(role)
+        return ModelReply(request_id=request.request_id,target=request.target,finish_reason='complete',
+            content='offline research by ' + role,usage=TokenUsage(status='unknown'))
 def factory(now):
-    team = build_agent_team(now, settings=settings)
-    for role in ('director', 'quant', 'sentiment', 'risk'):
-        agent = getattr(team, role)
-        def response(*args, _role=role, **kwargs):
-            calls.append(_role)
-            return 'offline research by ' + _role
-        agent.call_llm = response
-    return team
+    return build_agent_team(now,settings=settings,provider_factory=lambda role, config:Provider(role))
 with tempfile.TemporaryDirectory() as directory:
     system = AutoHedge(output_dir=directory, settings=settings, team_factory=factory)
     report = system.run_report('offline real-stack research')

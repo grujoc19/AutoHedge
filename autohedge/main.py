@@ -3,6 +3,7 @@
 from pathlib import Path
 import os
 import tempfile
+import time
 
 from autohedge.config import Settings, load_settings
 from autohedge.domain import (
@@ -60,7 +61,12 @@ class AutoHedge:
             settings.require_research_credentials()
             from autohedge.workers import build_agent_team
 
-            return build_agent_team(now, settings=settings)
+            return build_agent_team(
+                now,
+                settings=settings,
+                clock=clock,
+                monotonic=monotonic if monotonic is not None else time.monotonic,
+            )
 
         self._snapshot_team_factory = (
             (lambda now: default_factory(now, snapshot_mode=True))

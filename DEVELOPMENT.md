@@ -7,9 +7,10 @@ implementation history. Its stabilization is complete. G1.1 adds the
 [provider-neutral model contract](docs/MODEL_CALLS.md); G1.2 adds immutable
 [model/provider profiles for six roles](docs/MODEL_CONFIGURATION.md), including
 legacy fallbacks and selected-provider credential checks. Actual provider adapters
-and research integration are still missing. The next step is G1.3, migrating the
-existing Swarms/OpenAI path. Until then, explicit profiles for active research
-roles are rejected before agent construction, never silently ignored.
+other than OpenAI are still missing. [G1.3](docs/OPENAI_RESEARCH.md) connects the
+existing Swarms roles to validated OpenAI calls, per-role limits and model-call
+audits. The next step is G1.4, Ollama. Unsupported backends are rejected before
+agent construction, never silently replaced by OpenAI.
 
 ## Implemented scope
 
@@ -145,13 +146,15 @@ tracebacks/local-variable dumps are suppressed. Logs contain run IDs, stages and
 safe failure categories, not raw research prompts or model responses. No custom
 sink is installed at package import.
 
-There are five application stages, at most six normal model turns (Sentiment
-gets up to two turns to consume search results), no application-level model/tool
-retries and no hidden tool-summary or context-compression model calls. Prompt
-size is limited to 32,000 characters, model output budget to 1,500 tokens per
-turn, and each recorded stage to 20,000 characters. Search-provider failures
-are recorded independently so a swallowed Swarms tool error still aborts the
-cycle. Empty, invalid or oversized stage output never proceeds to later stages.
+There are five application stages and exactly one validated model call per
+successful standard stage. Read-only Exa collection runs before Sentiment when
+enabled; SDK agents have no tools. No model retries, fallbacks, tool-summary or
+context-compression calls occur. The complete model transcript is limited to
+32,000 characters, output defaults to 1,500 tokens (role-configurable), and stage
+text is capped at 20,000 characters. Prompt-free call audits retain model identity,
+usage availability and timing. Empty, truncated, refused, invalid or unverified
+outputs never proceed to later stages. See the G1.3 document for limits and the
+`.agent` access path to real Swarms instances inside research runners.
 
 The cycle deadline is checked before and after synchronous agent calls; it
 prevents subsequent stages, but cannot forcibly interrupt arbitrary Python

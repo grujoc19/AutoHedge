@@ -49,7 +49,7 @@ class RoleConfigurationTests(unittest.TestCase):
                 )
                 self.assertEqual(resolved.timeout_seconds, 12)
                 self.assertEqual(resolved.max_output_tokens, 1500)
-        settings.require_legacy_model_configuration()
+        settings.require_research_model_configuration()
 
     def test_independent_role_profiles_form_ready_to_use_model_requests(self):
         providers = ("ollama", "ollama", "ollama", "deepseek", "anthropic", "gemini")
@@ -210,7 +210,7 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
         with self.assertRaises(ConfigurationError):
             forged.model_for("quant")
         with self.assertRaises(ConfigurationError):
-            forged.require_legacy_model_configuration()
+            forged.require_research_model_configuration()
         with self.assertRaises(ConfigurationError) as caught:
             settings.model_for("private-unknown-role")
         self.assertNotIn("private-unknown-role", str(caught.exception))
@@ -345,7 +345,7 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             ):
                 with (
                     self.subTest(role=role),
-                    self.assertRaisesRegex(ConfigurationError, "Role-specific"),
+                    self.assertRaisesRegex(ConfigurationError, "not implemented"),
                 ):
                     configured.require_research_credentials()
 

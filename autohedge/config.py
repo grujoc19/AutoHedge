@@ -40,6 +40,7 @@ class Settings(BaseModel):
     request_timeout: Seconds = 30
     cycle_timeout: float = Field(default=180, gt=0, le=600, allow_inf_nan=False)
     search_enabled: bool = True
+    openai_base_url: HttpUrl = HttpUrl("https://api.openai.com/v1")
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
     jupiter_base_url: HttpUrl = HttpUrl("https://api.jup.ag")
     massive_base_url: HttpUrl = HttpUrl("https://api.massive.com")
@@ -67,7 +68,11 @@ class Settings(BaseModel):
         return value
 
     @field_validator(
-        "exa_base_url", "jupiter_base_url", "massive_base_url", "coingecko_base_url"
+        "openai_base_url",
+        "exa_base_url",
+        "jupiter_base_url",
+        "massive_base_url",
+        "coingecko_base_url",
     )
     @classmethod
     def https_without_credentials(cls, value):
@@ -145,25 +150,21 @@ class Settings(BaseModel):
                 f"{backend.value.upper()}_API_KEY is required for the selected role"
             )
 
-    def require_legacy_model_configuration(self):
-        """Never silently ignore a role override in the unmigrated Swarms path."""
-        try:
-            profiles = RoleModels.model_validate(self.role_models)
-        except (ValueError, TypeError):
-            raise ConfigurationError("Invalid role model configuration") from None
-        if any(
-            getattr(profiles, role.value) is not None for role in LEGACY_RESEARCH_ROLES
-        ):
-            raise ConfigurationError(
-                "Role-specific model settings are not yet supported by the research pipeline"
-            )
+    def require_research_model_configuration(self):
+        for role in LEGACY_RESEARCH_ROLES:
+            config = self.model_for(role)
+            if config.target.provider != "openai":
+                raise ConfigurationError(
+                    "Selected research provider is not implemented yet"
+                )
+            native_model = config.target.model.removeprefix("openai/")
+            if not native_model or "/" in native_model:
+                raise ConfigurationError("Invalid OpenAI model identifier")
 
     def require_research_credentials(self):
-        self.require_legacy_model_configuration()
-        if not self.openai_api_key:
-            raise ConfigurationError(
-                "OPENAI_API_KEY is required for model-backed research"
-            )
+        self.require_research_model_configuration()
+        for role in LEGACY_RESEARCH_ROLES:
+            self.require_model_credentials(role)
         if self.search_enabled and not self.exa_api_key:
             raise ConfigurationError("EXA_API_KEY is required when search is enabled")
 
@@ -196,6 +197,7 @@ ENV_FIELDS = {
     "AUTOHEDGE_REQUEST_TIMEOUT": "request_timeout",
     "AUTOHEDGE_CYCLE_TIMEOUT": "cycle_timeout",
     "AUTOHEDGE_SEARCH_ENABLED": "search_enabled",
+    "AUTOHEDGE_OPENAI_BASE_URL": "openai_base_url",
     "AUTOHEDGE_EXA_BASE_URL": "exa_base_url",
     "AUTOHEDGE_JUPITER_BASE_URL": "jupiter_base_url",
     "MASSIVE_BASE_URL": "massive_base_url",

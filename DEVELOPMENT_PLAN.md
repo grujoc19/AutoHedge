@@ -8,12 +8,12 @@ Lücken, Anpassungen und die neue Reihenfolge **G1–G7**. Unpräfixierte IDs un
 bezeichnen weiterhin die alten sechs Phasen und werden nicht still umnummeriert.
 
 G1.1, der [providerneutrale Modellvertrag](docs/MODEL_CALLS.md), ist inzwischen
-implementiert und offline geprüft, aber noch nicht im Research-Pfad eingebunden.
+implementiert und offline geprüft.
 G1.2 ergänzt [Provider-/Modellkonfiguration je Rolle](docs/MODEL_CONFIGURATION.md)
-mit alten Fallbacks, sicheren Schlüsseln und expliziter Ablehnung im noch nicht
-migrierten Research-Pfad. Nächste Arbeit ist **G1.3: Swarms/OpenAI anbinden**.
-Die bisherige Stabilisierung ist abgeschlossen; Provider-Anbindung gehört nach
-der neuen Zieldefinition ebenfalls zur Foundation und fehlt noch. Danach folgen
+mit alten Fallbacks und sicheren Schlüsseln. [G1.3](docs/OPENAI_RESEARCH.md) bindet
+den Swarms/OpenAI-Pfad jetzt an Profile und Modellverträge: fünf validierte Calls,
+Metadaten-Audit und Exa als expliziter lesender Abruf ohne Agenten-Tools.
+Nächste Arbeit ist **G1.4: Ollama-Adapter**. Weitere Cloud-Adapter fehlen noch. Danach folgen
 persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
@@ -267,8 +267,9 @@ Legacy 1.1–1.6 und 2.1–2.5 sind implementiert und offline geprüft. Nach dem
 Zielabgleich ist **G1.1: providerneutraler Modellvertrag** implementiert: validierte
 Einmalaufrufe, sichere Fehler und explizite Usage-Ungewissheit. G1.2 liefert die
 sechs Rollenprofile und Credential-Auswahl, ohne neue Backends zu aktivieren.
-Als Nächstes folgt G1.3, Migration des bestehenden Swarms/OpenAI-Pfads, danach
-geprüfte lokale/Cloud-Adapter.
+G1.3 bindet den Swarms/OpenAI-Pfad inzwischen an die Modellgrenze an; vorhandene
+Lifecycle-/Snapshot-/Fehlertests bestehen. Als Nächstes folgt G1.4, ein echter
+Ollama-Adapter, danach weitere geprüfte Cloud-Adapter.
 Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
 oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige

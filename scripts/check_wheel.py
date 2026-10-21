@@ -92,6 +92,9 @@ from autohedge.data.history import HistoryStore
 from autohedge.config import Settings
 from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, complete_model
 from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.swarms import SwarmsModelBridge
+from autohedge.ai.audit import ModelCallAudit
 from autohedge.indicators import IndicatorConfig, calculate_indicators
 from autohedge.snapshots import build_research_snapshot, collect_research_snapshot, parse_research_snapshot
 assert IndicatorConfig().minimum_candles == 34
@@ -114,8 +117,8 @@ assert HistoryStore("history").directory == Path("history")
 from autohedge import AutoHedge
 from autohedge.workers import build_agent_team
 team = build_agent_team()
-assert team.director is not team.quant
-assert not team.director.handoffs
+assert team.director.agent is not team.quant.agent
+assert not team.director.agent.handoffs
 system = AutoHedge(output_dir='outputs')
 system.conversation.add(role='user', content='installed wheel check')
 assert 'installed wheel check' in str(system.conversation.return_messages_as_list())
