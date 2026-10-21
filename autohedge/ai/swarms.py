@@ -16,11 +16,17 @@ class SwarmsModelBridge:
         provider: ModelProvider,
         config: RoleModelConfig,
         *,
+        system_prompt: str | None = None,
         clock=utc_now,
         monotonic=time.monotonic,
     ):
         self.provider = provider
         self.config = RoleModelConfig.model_validate(config)
+        self.system_message = (
+            ModelMessage(role="system", content=system_prompt)
+            if system_prompt is not None
+            else None
+        )
         self.clock, self.monotonic = clock, monotonic
         self.begin()
 
@@ -38,6 +44,15 @@ class SwarmsModelBridge:
                 messages = (ModelMessage(role="user", content=task),)
             elif task is not None:
                 raise ModelCallError(ModelErrorCode.INVALID_REQUEST)
+            messages = tuple(
+                ModelMessage.model_validate(message) for message in messages
+            )
+            if self.system_message is not None:
+                if messages and messages[0].role == "system":
+                    if messages[0] != self.system_message:
+                        raise ModelCallError(ModelErrorCode.INVALID_REQUEST)
+                else:
+                    messages = (self.system_message, *messages)
             request = ModelRequest(messages=messages, **self.config.model_dump())
             self.result = complete_model(
                 self.provider, request, clock=self.clock, monotonic=self.monotonic

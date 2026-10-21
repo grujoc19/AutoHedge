@@ -11,14 +11,18 @@ werden dafür geladen oder aufgerufen.
 verwendet die Profile seiner vier aktiven Rollen, einschließlich Modell, Limits
 und Timeout. Ohne Profil bleiben die zwei alten Modellvariablen Fallbacks.
 [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama als echten Adapter und gemischte
-lokale/Cloud-Rollen. Andere aktive Backends werden vor Agentenkonstruktion mit
+lokale/Cloud-Rollen; [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic. Andere aktive
+Backends werden vor Agentenkonstruktion mit
 `ConfigurationError` abgewiesen; kein Profil wird ignoriert oder still durch
-OpenAI ersetzt. Weitere Cloud-Adapter folgen in G1.5. OpenAI-Endpunkt:
+OpenAI ersetzt. Gemini und DeepSeek folgen getrennt. OpenAI-Endpunkt:
 `AUTOHEDGE_OPENAI_BASE_URL`, Default `https://api.openai.com/v1`, nur HTTPS ohne
 eingebettete Credentials, Query oder Fragment. Ollama-Endpunkt:
 `AUTOHEDGE_OLLAMA_BASE_URL`, Default `http://127.0.0.1:11434`, HTTP/HTTPS ohne
 eingebettete Credentials, Query oder Fragment. Native Ollama-Modellkennungen
-einschließlich Namespace und Tag bleiben unverändert.
+einschließlich Namespace und Tag bleiben unverändert. Anthropic-Endpunkt:
+`AUTOHEDGE_ANTHROPIC_BASE_URL`, Default `https://api.anthropic.com/v1`, nur HTTPS
+ohne Credentials, Query oder Fragment. Ein führendes `anthropic/` wird nur beim
+Senden entfernt; im Audit bleibt das angefragte Ziel erhalten.
 
 ## Rollen, Variablen und Defaults
 
@@ -154,6 +158,7 @@ aus; Swarms und Modell-SDKs werden dabei nicht geladen. Der installierte Wheel
 wird zusätzlich außerhalb des Checkouts geprüft.
 
 Die [G1.3-Anbindung](OPENAI_RESEARCH.md) und der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md)
-sind umgesetzt. Zusätzliche echte Swarms-Zyklen mit HTTP-Fixtures prüfen lokale
+sind umgesetzt, ebenso [G1.5a mit Anthropic](ANTHROPIC_RESEARCH.md).
+Zusätzliche echte Swarms-Zyklen mit HTTP-Fixtures prüfen lokale
 und gemischte Rollen sowie Fehler ohne Cloud-Fallback. Profile allein starten
-weiterhin kein Modell. Nächster Schritt: **G1.5a**, Anthropic.
+weiterhin kein Modell. Nächster Schritt: **G1.5b**, Gemini.

@@ -93,6 +93,7 @@ from autohedge.config import Settings
 from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, complete_model
 from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
 from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.anthropic import AnthropicProvider
 from autohedge.ai.ollama import OllamaProvider
 from autohedge.ai.swarms import SwarmsModelBridge
 from autohedge.ai.audit import ModelCallAudit
@@ -128,6 +129,14 @@ local_settings.require_research_credentials()
 local_team = build_agent_team(settings=local_settings)
 for name in ("director", "quant", "sentiment", "risk"):
     assert isinstance(getattr(local_team, name).bridge.provider, OllamaProvider)
+anthropic_settings = Settings(search_enabled=False, anthropic_api_key="offline-fixture", role_models={
+    role: {"target": {"provider": "anthropic", "model": "claude-installed-fixture"}}
+    for role in ("quant", "trading_director", "news_intelligence", "risk_manager")
+})
+anthropic_settings.require_research_credentials()
+anthropic_team = build_agent_team(settings=anthropic_settings)
+for name in ("director", "quant", "sentiment", "risk"):
+    assert isinstance(getattr(anthropic_team, name).bridge.provider, AnthropicProvider)
 system = AutoHedge(output_dir='outputs')
 system.conversation.add(role='user', content='installed wheel check')
 assert 'installed wheel check' in str(system.conversation.return_messages_as_list())

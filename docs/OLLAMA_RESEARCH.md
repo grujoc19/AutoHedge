@@ -101,4 +101,6 @@ Der installierte Wheel wird zusätzlich außerhalb des Checkouts geprüft.
 Nicht geprüft: echter Ollama-Server, lokale Modellqualität, RAM/VRAM-Bedarf,
 reale Latenz und Server-Capabilities. Es gibt weiterhin keine strukturierte
 Signal- oder Risk-Engine und keine Handelsausführung. Nächster Schritt ist
-**G1.5a: Anthropic**, danach Gemini und DeepSeek jeweils separat.
+**G1.5b: Gemini**; [G1.5a mit Anthropic](ANTHROPIC_RESEARCH.md) ist inzwischen
+umgesetzt, einschließlich Korrektur der Systemprompt-Übergabe für alle Adapter.
+DeepSeek folgt separat.

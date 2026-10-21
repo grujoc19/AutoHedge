@@ -52,9 +52,7 @@ class AgentLifecycleTests(unittest.TestCase):
         for role in ("quant", "news_intelligence", "trading_director", "risk_manager"):
             settings = Settings(
                 role_models={
-                    role: {
-                        "target": {"provider": "anthropic", "model": "new-role-model"}
-                    }
+                    role: {"target": {"provider": "gemini", "model": "new-role-model"}}
                 }
             )
             with patch("autohedge.workers.Agent") as agent:

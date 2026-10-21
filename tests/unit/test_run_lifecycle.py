@@ -41,9 +41,9 @@ class RunLifecycleTests(unittest.TestCase):
         self,
     ):
         settings = Settings(
-            anthropic_api_key="fixture-anthropic",
+            gemini_api_key="fixture-gemini",
             role_models={
-                "quant": {"target": {"provider": "anthropic", "model": "unsupported"}}
+                "quant": {"target": {"provider": "gemini", "model": "unsupported"}}
             },
         )
         settings.require_model_credentials("quant")

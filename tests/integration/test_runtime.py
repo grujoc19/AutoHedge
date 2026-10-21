@@ -190,6 +190,8 @@ def respond(request):
     assert request.url.host=='api.openai.com'
     assert request.headers['authorization']=='Bearer fixture-model-key'
     assert not body.get('tools')
+    assert body['messages'][0]['role']=='system'
+    assert 'This is research only.' in body['messages'][0]['content']
     models.append(body)
     return httpx.Response(200,json={'model':body['model']+'-fixture','choices':[{'index':0,'finish_reason':'stop',
         'message':{'role':'assistant','content':'offline research '+body['model']}}],
@@ -273,6 +275,8 @@ for mixed in (False, True):
         body=json.loads(request.content)
         calls.append((request,body))
         assert not body.get('tools')
+        assert body['messages'][0]['role']=='system'
+        assert 'This is research only.' in body['messages'][0]['content']
         if request.url.host=='api.openai.com':
             assert mixed
             assert request.headers['authorization']=='Bearer fixture-cloud'
@@ -359,6 +363,134 @@ for failure in ('timeout','unavailable','missing_model','bad_json','length','too
                 else:
                     raise AssertionError('Failed local model must stop the cycle')
                 assert engine.last_report is None
+    assert len(calls)==2, (failure,len(calls))
+""")
+
+    def test_public_anthropic_and_three_backend_research_preserve_limits_and_usage(
+        self,
+    ):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime, timezone
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.ollama import OllamaProvider
+from autohedge.config import Settings
+roles=('trading_director','quant','news_intelligence','risk_manager')
+now=datetime(2026,10,21,12,tzinfo=timezone.utc)
+for mixed in (False,True):
+    backends=('anthropic','ollama','openai','ollama') if mixed else ('anthropic',)*4
+    profiles={role:{'target':{'provider':backend,'model':('anthropic/' if backend=='anthropic' else '')+'model-'+role},
+        'max_output_tokens':100+i,'timeout_seconds':7+i} for i,(role,backend) in enumerate(zip(roles,backends))}
+    settings=Settings(role_models=profiles,search_enabled=False,anthropic_api_key='fixture-anthropic',
+        openai_api_key='fixture-openai' if mixed else None)
+    settings.require_research_credentials()
+    calls=[]
+    def respond(request):
+        body=json.loads(request.content)
+        calls.append((request,body))
+        assert not body.get('tools') and body['stream'] is False
+        if request.url.host=='api.anthropic.com':
+            assert request.url.path=='/v1/messages'
+            assert request.headers['x-api-key']=='fixture-anthropic'
+            assert 'authorization' not in request.headers
+            assert not body['model'].startswith('anthropic/')
+            assert 'system' in body and 'thinking' not in body and 'cache_control' not in body
+            assert 'This is research only.' in body['system']
+            for message in body['messages']:
+                assert message['role'] in ('user','assistant')
+                assert all(block['type']=='text' for block in message['content'])
+            usage={'input_tokens':10,'output_tokens':2,'cache_creation_input_tokens':3,'cache_read_input_tokens':4}
+            if body['model'].endswith('risk_manager'):
+                usage.pop('cache_read_input_tokens')
+            return httpx.Response(200,json={'type':'message','role':'assistant','model':body['model']+'-revision',
+                'content':[{'type':'text','text':'offline Anthropic evidence'}],'stop_reason':'end_turn','usage':usage})
+        if request.url.host=='api.openai.com':
+            assert mixed and request.headers['authorization']=='Bearer fixture-openai'
+            return httpx.Response(200,json={'model':body['model'],'choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline OpenAI evidence'}}],
+                'usage':{'prompt_tokens':10,'completion_tokens':2}})
+        assert mixed and request.url.host=='127.0.0.1'
+        assert 'authorization' not in request.headers and 'x-api-key' not in request.headers
+        return httpx.Response(200,json={'model':body['model'],'done':True,'done_reason':'stop',
+            'message':{'role':'assistant','content':'offline local evidence'},'prompt_eval_count':10,'eval_count':2})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client, tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.AnthropicProvider',side_effect=lambda settings:AnthropicProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+            'autohedge.workers.OllamaProvider',side_effect=lambda settings:OllamaProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory,clock=lambda:now)
+            report=engine.run_report('Supplied frozen evidence')
+    assert len(calls)==5
+    for stage,(sent,body),role in zip(report.stages,calls,(roles[0],roles[1],roles[2],roles[3],roles[0])):
+        audit,=stage.model_calls
+        config=settings.model_for(role)
+        assert audit.role.value==role and audit.target==config.target
+        assert audit.timeout_seconds==config.timeout_seconds==sent.extensions['timeout']['read']
+        assert audit.max_output_tokens==config.max_output_tokens
+        if config.target.provider=='anthropic':
+            assert body['max_tokens']==config.max_output_tokens
+            assert audit.resolved_model==body['model']+'-revision'
+            if role=='risk_manager':
+                assert audit.usage.status=='partial' and audit.usage.input_tokens is None
+            else:
+                assert audit.usage.input_tokens==17 and audit.usage.total_tokens==19
+        elif config.target.provider=='openai':
+            assert body['max_completion_tokens']==config.max_output_tokens
+        else:
+            assert body['options']['num_predict']==config.max_output_tokens
+    assert len({stage.model_calls[0].request_id for stage in report.stages})==5
+    assert report.execution_enabled is False
+""")
+
+    def test_failed_anthropic_stage_never_retries_switches_backend_or_finishes_report(
+        self,
+    ):
+        self.run_offline("""
+import json
+import tempfile
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.config import Settings
+from autohedge.errors import ResearchError
+settings=Settings(openai_api_key='fixture-openai',anthropic_api_key='fixture-anthropic',search_enabled=False,
+    role_models={'quant':{'target':{'provider':'anthropic','model':'claude-fixture'}}})
+for failure in ('auth','rate_limit','overloaded','timeout','bad_json','refusal','max_tokens','tool_use','pause_turn','thinking'):
+    calls=[]
+    def respond(request):
+        calls.append(request)
+        if request.url.host=='api.openai.com':
+            assert len(calls)==1, 'No fallback or downstream call is allowed'
+            return httpx.Response(200,json={'model':'fixture','choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline thesis'}}]})
+        assert request.url.host=='api.anthropic.com'
+        if failure in ('auth','rate_limit','overloaded'):
+            return httpx.Response({'auth':401,'rate_limit':429,'overloaded':529}[failure],text='private-body')
+        if failure=='timeout':
+            raise httpx.ReadTimeout('private-body')
+        if failure=='bad_json':
+            return httpx.Response(200,text='private-body')
+        return httpx.Response(200,json={'type':'message','role':'assistant','model':'fixture',
+            'stop_reason':'end_turn' if failure=='thinking' else failure,
+            'content':[{'type':'thinking','thinking':'private-body'}] if failure=='thinking' else [{'type':'text','text':'private-body'}],
+            'usage':{'input_tokens':10,'output_tokens':2,'cache_creation_input_tokens':0,'cache_read_input_tokens':0}})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client, tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.AnthropicProvider',side_effect=lambda settings:AnthropicProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory)
+            try:
+                engine.run_report('Offline failing research')
+            except ResearchError as error:
+                assert error.stage=='quant' and 'private-body' not in str(error)
+            else:
+                raise AssertionError('Rejected Anthropic response must stop the cycle')
+            assert engine.last_report is None
     assert len(calls)==2, (failure,len(calls))
 """)
 

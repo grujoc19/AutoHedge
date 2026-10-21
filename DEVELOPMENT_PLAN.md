@@ -14,8 +14,10 @@ mit alten Fallbacks und sicheren Schlüsseln. [G1.3](docs/OPENAI_RESEARCH.md) bi
 den Swarms/OpenAI-Pfad jetzt an Profile und Modellverträge: fünf validierte Calls,
 Metadaten-Audit und Exa als expliziter lesender Abruf ohne Agenten-Tools.
 [G1.4](docs/OLLAMA_RESEARCH.md) ergänzt Ollama und gemischte lokale/Cloud-Rollen
-ohne Fallback. Nächste Arbeit ist **G1.5a: Anthropic**; Gemini und DeepSeek folgen
-separat. Danach folgen
+ohne Fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit LiteLLM-
+Formatierung und nativer Usage-Prüfung; außerdem bleiben Rollen-Systemprompts
+jetzt an der Modellgrenze erhalten. Nächste Arbeit ist **G1.5b: Gemini**,
+danach DeepSeek separat. Danach folgen
 persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
@@ -272,8 +274,9 @@ sechs Rollenprofile und Credential-Auswahl, ohne neue Backends zu aktivieren.
 G1.3 bindet den Swarms/OpenAI-Pfad inzwischen an die Modellgrenze an; vorhandene
 Lifecycle-/Snapshot-/Fehlertests bestehen. G1.4 ergänzt den nativen Ollama-Adapter
 mit denselben Verträgen, vollständig lokalen oder gemischten Rollen und
-Fehlerabbrüchen ohne Cloud-Fallback. Als Nächstes folgt G1.5a, Anthropic, danach
-Gemini und DeepSeek in getrennten Schritten.
+Fehlerabbrüchen ohne Cloud-Fallback. G1.5a ergänzt Anthropic und behebt die
+Systemprompt-Übergabe für alle Backends. Als Nächstes folgt G1.5b, Gemini, danach
+DeepSeek in einem getrennten Schritt.
 Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
 oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige

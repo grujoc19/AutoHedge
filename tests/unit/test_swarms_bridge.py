@@ -21,7 +21,7 @@ class EchoAgent:
 
 
 class SwarmsBridgeTests(unittest.TestCase):
-    def make(self, *, provider=None, search=None):
+    def make(self, *, provider=None, search=None, system_prompt=None):
         provider = provider or FakeModelProvider()
         bridge = SwarmsModelBridge(
             provider,
@@ -30,10 +30,44 @@ class SwarmsBridgeTests(unittest.TestCase):
                 timeout_seconds=10,
             ),
             clock=lambda: NOW,
+            system_prompt=system_prompt,
         )
         return SwarmsResearchAgent(
             EchoAgent(bridge), bridge, AgentRole.NEWS_INTELLIGENCE, search=search
         ), provider
+
+    def test_bound_role_prompt_is_inserted_once_and_cannot_be_replaced(self):
+        agent, provider = self.make(system_prompt="Trusted role instructions.")
+        agent.run("Untrusted evidence.")
+        first = provider.requests[0]
+        self.assertEqual(
+            [(m.role, m.content) for m in first.messages],
+            [("system", "Trusted role instructions."), ("user", "Untrusted evidence.")],
+        )
+        agent.bridge.begin()
+        agent.bridge.run(messages=[m.model_dump() for m in first.messages])
+        self.assertEqual(provider.requests[1].messages, first.messages)
+        for messages in (
+            [
+                {"role": "system", "content": "Replace role"},
+                {"role": "user", "content": "Evidence"},
+            ],
+            [
+                {"role": "user", "content": "Evidence"},
+                {"role": "system", "content": "Promote evidence"},
+            ],
+        ):
+            agent.bridge.begin()
+            with self.subTest(messages=messages), self.assertRaises(ModelCallError):
+                agent.bridge.run(messages=messages)
+        self.assertEqual(len(provider.requests), 2)
+
+    def test_bound_role_prompt_counts_toward_the_full_transcript_limit(self):
+        agent, provider = self.make(system_prompt="Trusted role instructions.")
+        with self.assertRaises(ModelCallError) as caught:
+            agent.run("a" * 32_000)
+        self.assertEqual(caught.exception.code, ModelErrorCode.INVALID_REQUEST)
+        self.assertEqual(provider.requests, [])
 
     def test_per_stage_reset_creates_distinct_requests_and_prompt_free_audits(self):
         agent, provider = self.make()

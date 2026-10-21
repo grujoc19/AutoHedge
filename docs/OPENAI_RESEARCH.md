@@ -10,6 +10,11 @@ Ergänzung G1.4: Derselbe Ablauf unterstützt inzwischen auch [Ollama je Rolle](
 einschließlich vollständig lokaler und gemischter Läufe. Dieser Text dokumentiert
 die gemeinsame Brücke und den OpenAI-Transport.
 
+Ergänzung G1.5a: [Anthropic](ANTHROPIC_RESEARCH.md) ist angebunden. Dabei wurde
+die fehlende Systemprompt-Übergabe behoben: Swarms erwartet sie vom Modellwrapper.
+Die Bridge ergänzt jetzt den gebundenen Rollenprompt vor dem SDK-Transcript,
+ohne Duplikat oder abweichende Systemanweisung. Das gilt für alle drei Adapter.
+
 ## Ablauf und Wiederverwendung
 
 ```text
@@ -121,4 +126,4 @@ echte Swarms-Zyklen mit gesperrten Sockets, ein vollständiger Standardlauf mit
 fünf gemockten OpenAI-POSTs und einem Exa-Abruf sowie frühe Abbrüche ohne Retry.
 Live-API-Zugang, reale Modellqualität und Abrechnungsgenauigkeit sind ungeprüft.
 Der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md) ist inzwischen angebunden;
-nächster Schritt ist **G1.5a: Anthropic**.
+[Anthropic](ANTHROPIC_RESEARCH.md) ebenfalls. Nächster Schritt ist **G1.5b: Gemini**.

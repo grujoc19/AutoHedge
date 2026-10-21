@@ -103,11 +103,13 @@ fallbacks. Immutable [role profiles](docs/MODEL_CONFIGURATION.md) now configure
 provider, model and call limits for all six roles while preserving legacy defaults.
 Keys are checked only for the selected backend; local profiles need no cloud key.
 The [Swarms research path](docs/OPENAI_RESEARCH.md) uses these contracts with
-[OpenAI or Ollama per role](docs/OLLAMA_RESEARCH.md), five validated model calls
+[OpenAI or Ollama per role](docs/OLLAMA_RESEARCH.md) and
+[Anthropic with LiteLLM formatting](docs/ANTHROPIC_RESEARCH.md), five validated
+model calls
 and prompt-free call audits in each report. Fully local research needs no cloud
 key when all four active roles use Ollama and Exa search is disabled. Local
 failures stop the cycle without cloud fallback. Other backends are rejected
-before agent construction; Anthropic is next, followed by Gemini and DeepSeek.
+before agent construction; Gemini is next, followed by DeepSeek.
 
 ## Roadmap
 

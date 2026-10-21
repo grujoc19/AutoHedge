@@ -41,6 +41,7 @@ class Settings(BaseModel):
     cycle_timeout: float = Field(default=180, gt=0, le=600, allow_inf_nan=False)
     search_enabled: bool = True
     openai_base_url: HttpUrl = HttpUrl("https://api.openai.com/v1")
+    anthropic_base_url: HttpUrl = HttpUrl("https://api.anthropic.com/v1")
     ollama_base_url: HttpUrl = HttpUrl("http://127.0.0.1:11434")
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
     jupiter_base_url: HttpUrl = HttpUrl("https://api.jup.ag")
@@ -70,6 +71,7 @@ class Settings(BaseModel):
 
     @field_validator(
         "openai_base_url",
+        "anthropic_base_url",
         "exa_base_url",
         "jupiter_base_url",
         "massive_base_url",
@@ -161,14 +163,16 @@ class Settings(BaseModel):
     def require_research_model_configuration(self):
         for role in LEGACY_RESEARCH_ROLES:
             config = self.model_for(role)
-            if config.target.provider not in {"openai", "ollama"}:
+            if config.target.provider not in {"openai", "ollama", "anthropic"}:
                 raise ConfigurationError(
                     "Selected research provider is not implemented yet"
                 )
-            if config.target.provider == "openai":
-                native_model = config.target.model.removeprefix("openai/")
+            if config.target.provider in {"openai", "anthropic"}:
+                native_model = config.target.model.removeprefix(
+                    config.target.provider + "/"
+                )
                 if not native_model or "/" in native_model:
-                    raise ConfigurationError("Invalid OpenAI model identifier")
+                    raise ConfigurationError("Invalid native cloud model identifier")
 
     def require_research_credentials(self):
         self.require_research_model_configuration()
@@ -207,6 +211,7 @@ ENV_FIELDS = {
     "AUTOHEDGE_CYCLE_TIMEOUT": "cycle_timeout",
     "AUTOHEDGE_SEARCH_ENABLED": "search_enabled",
     "AUTOHEDGE_OPENAI_BASE_URL": "openai_base_url",
+    "AUTOHEDGE_ANTHROPIC_BASE_URL": "anthropic_base_url",
     "AUTOHEDGE_OLLAMA_BASE_URL": "ollama_base_url",
     "AUTOHEDGE_EXA_BASE_URL": "exa_base_url",
     "AUTOHEDGE_JUPITER_BASE_URL": "jupiter_base_url",

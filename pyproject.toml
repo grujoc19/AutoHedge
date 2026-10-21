@@ -12,6 +12,7 @@ authors = [{name = "Kye Gomez", email = "kye@apac.ai"}]
 requires-python = ">=3.10,<4.0"
 dependencies = [
     "httpx>=0.28,<0.29",
+    "litellm==1.76.1",
     "loguru>=0.7,<0.8",
     "pydantic>=2.10,<3",
     "python-dotenv>=1.0,<2",

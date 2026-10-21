@@ -6,6 +6,7 @@ import time
 from swarms import Agent
 
 from autohedge.ai.client import utc_now
+from autohedge.ai.anthropic import AnthropicProvider
 from autohedge.ai.config import AgentRole
 from autohedge.ai.openai import OpenAIProvider
 from autohedge.ai.ollama import OllamaProvider
@@ -76,11 +77,19 @@ def build_agent_team(
         provider = (
             provider_factory(role, config)
             if provider_factory is not None
-            else {"openai": OpenAIProvider, "ollama": OllamaProvider}[
-                config.target.provider
-            ](settings)
+            else {
+                "openai": OpenAIProvider,
+                "ollama": OllamaProvider,
+                "anthropic": AnthropicProvider,
+            }[config.target.provider](settings)
         )
-        bridge = SwarmsModelBridge(provider, config, clock=clock, monotonic=monotonic)
+        bridge = SwarmsModelBridge(
+            provider,
+            config,
+            system_prompt=prompt + suffix,
+            clock=clock,
+            monotonic=monotonic,
+        )
         agent = Agent(
             agent_name=name,
             system_prompt=prompt + suffix,

@@ -45,7 +45,9 @@ Credential-Auswahl; lokale Profile benötigen keinen OpenAI-Key.
 Research, mit kontrolliertem HTTP-Transport, fünf Modellaufrufen und Stufen-Audit.
 Exa wird bei erlaubter Exploration vor Sentiment lesend abgerufen; die SDK-Agenten
 haben keine Tools. [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama je Rolle und gemischte
-Läufe ohne Cloud-Fallback. Weitere Cloud-Adapter fehlen noch; nicht unterstützte
+Läufe ohne Cloud-Fallback. [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit
+LiteLLM-Textformatierung und nativer Usage-Prüfung. Die Bridge übergibt jetzt den
+gebundenen Rollen-Systemprompt für alle Adapter. Gemini/DeepSeek fehlen noch; nicht unterstützte
 aktive Backends werden vor Agentenkonstruktion abgewiesen.
 
 ## Datenfluss und feste Ausführungsgrenze
@@ -220,7 +222,7 @@ Legacy-Referenzen und werden dort auf die sieben neuen Phasen abgebildet.
 
 | Zielphase | Nächste Aufgaben | Wiederverwendung |
 | --- | --- | --- |
-| G1 Foundation | Providervertrag, Rollenprofile, Swarms-Brücke und OpenAI-/Ollama-Adapter umgesetzt; als Nächstes Anthropic, danach Gemini und DeepSeek | Settings, gemeinsame Fehler, Lifecycle-Tests |
+| G1 Foundation | Providervertrag, Rollenprofile, Swarms-Brücke und OpenAI-/Ollama-/Anthropic-Adapter umgesetzt; als Nächstes Gemini, danach DeepSeek | Settings, gemeinsame Fehler, Lifecycle-Tests |
 | G2 Data Collection | Ereignisspeicher, RSS, Binance und DEX Screener, weitere Quellen einzeln | Datenverträge, HTTP-Transport, HistoryStore und Snapshot |
 | G3 Market Intelligence | Budgets/Cache, News-Klassifikation, statistische Anomalien, später lokale ML | Indikatoren, Sentiment-/Exa-Kern, Qualitätsregeln |
 | G4 On-Chain Intelligence | RPC/Helius, Ereignisklassifikation und Python-Muster | Solana-Identität, Zeit-/Evidenzverträge |

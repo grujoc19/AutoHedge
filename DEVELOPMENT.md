@@ -9,8 +9,10 @@ implementation history. Its stabilization is complete. G1.1 adds the
 legacy fallbacks and selected-provider credential checks. [G1.3](docs/OPENAI_RESEARCH.md) connects the
 existing Swarms roles to validated OpenAI calls, per-role limits and model-call
 audits. [G1.4](docs/OLLAMA_RESEARCH.md) adds Ollama and mixed local/cloud roles
-without fallback. Other backends are rejected before agent construction.
-G1.5a, Anthropic, is next; Gemini and DeepSeek follow separately.
+without fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) adds Anthropic with LiteLLM
+text formatting and application-owned transport/Usage checks. The bridge now
+preserves bound role system prompts for all providers. Other backends are rejected
+before agent construction. G1.5b, Gemini, is next; DeepSeek follows separately.
 
 ## Implemented scope
 

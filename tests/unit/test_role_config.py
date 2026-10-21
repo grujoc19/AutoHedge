@@ -336,8 +336,8 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             settings = Settings(
                 openai_api_key="fixture-key",
                 exa_api_key="fixture-exa",
-                anthropic_api_key="fixture-anthropic",
-                role_models={role: profile("anthropic", "unsupported")},
+                gemini_api_key="fixture-gemini",
+                role_models={role: profile("gemini", "unsupported")},
             )
             settings.require_model_credentials(role)
             for configured in (
@@ -376,6 +376,31 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
         )
         with self.assertRaisesRegex(ConfigurationError, "OPENAI_API_KEY"):
             settings.require_research_credentials()
+
+    def test_anthropic_research_requires_its_own_key_and_valid_native_names(self):
+        settings = Settings(
+            search_enabled=False,
+            openai_api_key="unrelated",
+            role_models={
+                role: profile("anthropic", "anthropic/claude-fixture")
+                for role in (
+                    "quant",
+                    "trading_director",
+                    "news_intelligence",
+                    "risk_manager",
+                )
+            },
+        )
+        with self.assertRaisesRegex(ConfigurationError, "ANTHROPIC_API_KEY"):
+            settings.require_research_credentials()
+        settings.model_copy(
+            update={"anthropic_api_key": SecretStr("fixture")}
+        ).require_research_credentials()
+        for model in ("anthropic/", "openai/claude"):
+            with self.subTest(model=model), self.assertRaises(ConfigurationError):
+                Settings(
+                    role_models={"quant": profile("anthropic", model)}
+                ).require_research_model_configuration()
 
     def test_inactive_future_roles_do_not_require_credentials_for_legacy_research(self):
         settings = Settings(
