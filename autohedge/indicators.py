@@ -1,8 +1,6 @@
 """Causal Decimal indicators over validated, completed and already received candles."""
 
 from datetime import datetime, timedelta
-import hashlib
-import json
 from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 from typing import Annotated, Literal
 
@@ -19,6 +17,7 @@ from pydantic import (
 from autohedge.contracts import Amount, Contract, Instrument, Text, reject_bool
 from autohedge.data.contracts import CandleSeries, Interval
 from autohedge.data.history import HistorySnapshot
+from autohedge.data.provenance import content_id
 from autohedge.errors import DataQualityError
 
 # Independent of the embedding application's precision, rounding and traps.
@@ -222,10 +221,7 @@ def calculate_indicators(
             raise DataQualityError("invalid_clock") from None
         if history.received_at > as_of:
             raise DataQualityError("indicator_history_not_yet_available")
-        payload = json.dumps(
-            history.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
-        digest = hashlib.sha256(payload).hexdigest()
+        digest = content_id(history)
         closes = tuple(candle.close for candle in history.candles)
         rsi = _rsi(closes, config.rsi_period)
         fast, slow = _ema(closes, config.macd_fast), _ema(closes, config.macd_slow)

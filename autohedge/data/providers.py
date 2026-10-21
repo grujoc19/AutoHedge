@@ -4,6 +4,7 @@ from typing import Protocol
 
 from autohedge.contracts import Instrument
 from autohedge.data.contracts import CandleRequest, CandleSeries, NewsArticle, Quote
+from autohedge.data.history import HistorySnapshot
 
 
 class QuoteProvider(Protocol):
@@ -20,3 +21,7 @@ class MarketDataProvider(QuoteProvider, CandleProvider, Protocol):
 
 class NewsProvider(Protocol):
     def fetch_news(self, instrument: Instrument) -> tuple[NewsArticle, ...]: ...
+
+
+class HistoryProvider(Protocol):
+    def fetch_history(self, request: CandleRequest) -> HistorySnapshot: ...

@@ -1,7 +1,6 @@
 """Immutable normalized OHLCV pages, content-addressed storage and explicit replay."""
 
 import hashlib
-import json
 import os
 from pathlib import Path
 import re
@@ -23,6 +22,7 @@ from pydantic import (
 from autohedge.contracts import Contract
 from autohedge.data.contracts import CandleRequest, CandleSeries
 from autohedge.data.quality import validate_candle_response
+from autohedge.data.provenance import canonical_json
 from autohedge.errors import DataQualityError
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -149,9 +149,7 @@ class HistoryStore:
             snapshot = HistorySnapshot.model_validate(snapshot)
         except ValidationError:
             raise DataQualityError("invalid_history") from None
-        payload = json.dumps(
-            snapshot.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
+        payload = canonical_json(snapshot)
         if len(payload) > _MAX_ARTIFACT_BYTES:
             raise DataQualityError("history_too_large")
         digest = hashlib.sha256(payload).hexdigest()

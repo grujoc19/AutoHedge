@@ -1,7 +1,7 @@
 """Data gates operate on supplied UTC data and an explicit point-in-time clock."""
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal, localcontext
+from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 
 from pydantic import TypeAdapter, AwareDatetime, ValidationError
 
@@ -14,6 +14,8 @@ from autohedge.data.contracts import (
     QualityPolicy,
 )
 from autohedge.errors import DataQualityError
+
+_CONTEXT = Context(prec=128, rounding=ROUND_HALF_EVEN)
 
 
 def parse_market_data(payload: object) -> MarketData:
@@ -73,8 +75,7 @@ def validate_price_time(
     ):
         raise DataQualityError("quote_transport_lag")
     age = now - event_time
-    with localcontext() as context:
-        context.prec = 128
+    with localcontext(_CONTEXT):
         return Decimal(age.days * 86400 + age.seconds) + Decimal(
             age.microseconds
         ) / Decimal(1_000_000)
@@ -112,8 +113,7 @@ def validate_market_data(
         seconds=history.interval_seconds * policy.max_candle_lag_intervals
     ):
         raise DataQualityError("stale_candles")
-    with localcontext() as context:
-        context.prec = 128
+    with localcontext(_CONTEXT):
         deviation = abs(quote.price - last.close) / last.close * Decimal(10_000)
     if deviation > policy.max_price_deviation_bps:
         raise DataQualityError("price_deviation")
