@@ -1,6 +1,17 @@
 # AutoHedge: Repository-Review und Entwicklungsplan
 
-Stand: 20. Oktober 2026. Dies ist eine Analyse und ein Implementierungsplan; der aktuelle Umsetzungsstand ist unten separat aufgeführt.
+Aktualisiert: 21. Oktober 2026. Der ursprüngliche Repository-/PR-Review vom
+20. Oktober und seine Schritt-IDs bleiben unten als **Legacy-Plan** erhalten.
+Die erneut bereitgestellte [Zieldefinition](docs/PROJECT_GOAL.md) ist maßgeblich.
+Der [aktuelle Zielabgleich](docs/GOAL_ALIGNMENT.md) dokumentiert belegten Ist-Stand,
+Lücken, Anpassungen und die neue Reihenfolge **G1–G7**. Unpräfixierte IDs unten
+bezeichnen weiterhin die alten sechs Phasen und werden nicht still umnummeriert.
+
+Nächste Arbeit ist **G1.1: providerneutraler Modellvertrag**. Die bisherige
+Stabilisierung ist abgeschlossen; Provider-/Rollenabstraktion gehört nach der
+neuen Zieldefinition ebenfalls zur Foundation und fehlt noch. Danach folgen
+persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
+nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
 ## Umsetzungsstand nach Merge von PR #1
 
@@ -11,7 +22,8 @@ konsolidierte CI. Die folgenden Review-Befunde dokumentieren den vorherigen
 Stand und sind entsprechend historisch zu lesen. Inzwischen sind auch 1.4–1.6
 lokal umgesetzt: zentrale Settings und geschützte Logs, gemeinsame Providerfehler,
 validierte Domänenverträge und fünf explizite Research-Stufen mit frischen Teams.
-Phase 1 ist als Commit `5daea6e` auf `feat/stabilize-research-core` veröffentlicht.
+Die ursprüngliche Phase 1 ist als Commit `5daea6e` auf `feat/stabilize-research-core`
+veröffentlicht; das ist keine vollständige Umsetzung der erweiterten Zielphase G1.
 Schritt 2.1 ist als Commit `71e7384` veröffentlicht: normalisierte Quote-/OHLCV-/News-
 Verträge, Provider-Protokolle, Datenqualitätsprüfung vor und während Research
 sowie ein nachvollziehbarer Prüfbericht. Details in `docs/MARKET_DATA.md`.
@@ -117,13 +129,26 @@ Kein vollständiger Rewrite und zunächst keine Microservices. Ein modularer Pyt
 
 ## Zielarchitektur und feste Grenzen
 
-Die Nutzerergänzung vom 21. Oktober 2026 ist in [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md) festgehalten und für spätere Schritte maßgeblich: News Intelligence, Market Anomaly, On-Chain Intelligence und Trading Director; lokale Modelle mit gezielter Cloud-Eskalation, separate deterministische Risk Engine und Strategien über Minuten bis Stunden. Die folgenden Planzeilen enthalten die zugehörigen Datenfeeds, Rollen, Routing- und Evaluationsaufgaben ausdrücklich. Diese Zielrollen sind noch nicht implementiert.
+Die Nutzerdefinition vom 21. Oktober 2026 ist in [docs/PROJECT_GOAL.md](docs/PROJECT_GOAL.md)
+gespeichert und in [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md) konkretisiert:
+News Intelligence, Market Anomaly, On-Chain Intelligence, eigenständiger Quant,
+Trading Director und beratender Risk Manager; ereignisgesteuerte Auswahl,
+providerneutrales lokales/Cloud-Routing, separate deterministische Risk Engine und
+Strategien über Minuten bis Stunden. Die vollständigen strukturierten Zielrollen
+sind noch nicht implementiert. Der [Zielabgleich](docs/GOAL_ALIGNMENT.md) ergänzt
+konkrete Quellen, Kosten-/Datenbankanforderungen und priorisierte G1–G7-Arbeitspakete.
 
-Arbeitsannahme: zuerst Solana-Spot, zunächst wenige explizit freigegebene liquide Mint-Paare; keine automatische Ausweitung auf beliebige Memecoins und keine Short-/Hebelprodukte. Die Architektur erhält ein Asset-/Venue-Feld für spätere Erweiterungen. Vor Auswahl des historischen Solana-Datenanbieters dessen OHLCV-Abdeckung, Zeitauflösung, Kosten, Limits und Nutzungsrechte prüfen; Jupiter Search/Price allein liefern die benötigte Historie nicht.
+Arbeitsannahme für spätere Ausführung: zuerst Solana-Spot, zunächst wenige explizit
+freigegebene liquide Mint-Paare; keine automatische Ausweitung auf beliebige
+Memecoins und keine Short-/Hebelprodukte. Die Intelligence nutzt auch CEX-/Makro-
+Quellen; das erweitert die Ausführungsberechtigung nicht. Asset-/Venue-Felder und
+explizites Symbol-/Mint-/Pool-Mapping trennen diese Bereiche. Vor produktiver
+Nutzung historischer Solana-Daten OHLCV-Abdeckung, Zeitauflösung, Kosten, Limits
+und Nutzungsrechte prüfen; Jupiter Search/Price allein liefern die Historie nicht.
 
 ```text
 Provider -> normalisierter, zeitgestempelter Snapshot -> Python-Indikatoren
-         -> News Intelligence + Market Anomaly + On-Chain Intelligence
+         -> ereignisgesteuert: News + Anomaly + On-Chain + Quant + Risk Advisor
          -> Trading Director -> validierter Signalvorschlag
          -> feste Risikoprüfung + Portfolio-Snapshot -> genehmigte Order
          -> PaperBroker | getrennt freigegebener LiveBroker
@@ -132,14 +157,18 @@ Provider -> normalisierter, zeitgestempelter Snapshot -> Python-Indikatoren
 
 - Risk-Agent liefert zusätzliche Einschätzungen; er kann Regeln verschärfen, niemals lockern. Nur die feste Risk-Engine berechnet zulässige Mengen und genehmigt Orders.
 - Kein LLM erhält Signierfunktion, privaten Schlüssel, unkontrollierten HTTP-Zugang oder die Möglichkeit, Live-Modus/Kill-Switch umzuschalten.
-- Ein BUY-/SELL-Signal allein autorisiert keine Ausführung. Fehlende/ungültige/veraltete Daten führen zu HOLD beziehungsweise einer expliziten Ablehnung.
+- Ein BUY-/SELL-Signal allein autorisiert keine Ausführung. Die Ziel-Signal-Engine kennt BUY/SELL/HOLD/NO TRADE; fehlende/ungültige/veraltete Pflichtdaten führen zu NO TRADE beziehungsweise einer expliziten Ablehnung. Der heutige Research-Lauf bricht solche Fehler ab und erzeugt noch keine typisierten Signale.
 - SELL reduziert vorhandenen Bestand. Eröffnung von Short-Positionen ist im ersten Spot-Umfang ausgeschlossen.
 - Geldwerte mit Decimal bzw. Integer-Basiseinheiten; keine float-basierte Order- oder Kontobuchhaltung. Zeitstempel UTC-aware, Uhr injizierbar.
 - Vorschlag für Module, schrittweise anlegen: `config`, `domain`, `data`, `indicators`, `agents`, `orchestration`, `risk`, `execution`, `portfolio`, `backtesting`, `runtime`. Bestehende `tools` zunächst über Adapter weiterverwenden; keine reine Massenverschiebung.
 
-## Kleine Implementierungsschritte
+## Historische Implementierungsschritte (Legacy-IDs)
 
-Jede Zeile ist ein separat reviewbarer Commit oder kleiner PR. Tests des jeweiligen Verhaltens gehören in denselben Schritt. Vorgänger sind explizit angegeben; spätere Phasen rechtfertigen keine direkte Live-Anbindung in Phase 1.
+Die folgenden sechs Phasen erhalten den bisherigen Detailplan und seine IDs.
+Aktuelle Reihenfolge, zusätzliche Anforderungen und konkrete Abnahmen stehen im
+[G1–G7-Backlog](docs/GOAL_ALIGNMENT.md). Jede Zeile bleibt ein separat reviewbarer
+Commit oder kleiner PR mit passenden Tests. Spätere Phasen rechtfertigen keine
+direkte Live-Anbindung in der Foundation.
 
 ### Phase 1: Bestehendes Projekt stabilisieren — zuerst
 
@@ -175,10 +204,10 @@ Phasengrenze: konsistente reale Daten und geprüfte Berechnungen; Live-Providerp
 | --- | --- | --- | --- |
 | 3.1a | EvidenceEvent/AgentFinding-Verträge für Fakten, Interpretation, Unsicherheit, Neuigkeit und Evidenz-Abhängigkeiten; bestehende Rollen schrittweise migrieren | 1.6, 2.5 | Schemas und Pflichtrollen geprüft; keine Kennzahl ohne Berechnung oder Evidenz ohne Herkunft |
 | 3.1b | Sentiment-/Exa-Kern zu News Intelligence weiterentwickeln: Ereignis, betroffene Mints, Neuigkeit und mögliche Auswirkungen | 3.1a, 2.6 | Bekannt/neu/unklar belegt; Reposts und widersprüchliche Quellen geprüft; keine Rechte durch News-Prompt-Injection |
-| 3.1c | Quant-/Indikator-Kern zu Market Anomaly weiterentwickeln: lokale Statistik/ML zur Erkennung, lokales LLM zur Interpretation | 3.1a, 2.4; zusätzliche Modi 2.8 | Preis-/Volumen- und Regime-Abweichungen reproduzierbar; Train/Test getrennt; fehlende Book-/Liquiditätsfeeds verhindern entsprechende Behauptungen |
+| 3.1c | Indikator-Kern für Market Anomaly verwenden: lokale Statistik/ML zur Erkennung, lokales LLM zur Interpretation; Quant als eigene Rolle erhalten | 3.1a, 2.4; zusätzliche Modi 2.8 | Preis-/Volumen- und Regime-Abweichungen reproduzierbar; Train/Test getrennt; fehlende Book-/Liquiditätsfeeds verhindern entsprechende Behauptungen |
 | 3.1d | On-Chain Intelligence in Python mit lokaler Mustererkennung | 3.1a, 2.7 | Wallet-/Token-/LP-Befunde belegt, gemeinsame Wallet-Kontrolle und unvollständige Finalität berücksichtigt |
-| 3.2 | Trading Director aggregiert vollständige News-/Anomaly-/On-Chain-Befunde über ein leistungsfähigeres Cloud-Modell; unabhängige Bestätigungen und Gegenhypothesen prüfen | 3.1b–3.1d | BUY/SELL/HOLD mit Evidenz, Zeithorizont und Gültigkeit; Doppelzählung verhindert; unzureichende Evidenz führt zu HOLD; keine Ausführungsbefugnis |
-| 3.3 | Lokales/Cloud-Routing pro Rolle und begrenzte News-Eskalation; Kosten-/Zeitbudget, Ausfallpfade und optionale Risk-Advisor-Warnungen | 3.1a, 3.2 | Gleiche Schemas pro Route; lokaler Ausfall/Timeout/Budgetgrenze führt definiert zu Abstention/HOLD; Warnungen können feste Risk-Limits nicht lockern |
+| 3.2 | Trading Director aggregiert die je Strategie erforderlichen News-/Anomaly-/On-Chain-/Quant-/Risk-Advisor-Befunde; unabhängige Bestätigungen und Gegenhypothesen prüfen | 3.1b–3.1d, G5 | BUY/SELL/HOLD/NO TRADE mit Evidenz, Unsicherheit, Zeithorizont, Gültigkeit und Invalidierungsbedingungen; Doppelzählung verhindert; unzureichende Evidenz führt zu NO TRADE; keine Ausführungsbefugnis |
+| 3.3 | Routing-Funktionen jetzt in G1/G3 vorziehen: Provider-/Modellwahl pro Rolle, begrenzte Eskalation, persistente Kosten-/Zeitbudgets und Cache | G1, G3 | Gleiche Schemas pro Route; lokaler Ausfall/Timeout/Budgetgrenze führt definiert zu Abstention/NO TRADE; Warnungen können feste Risk-Limits nicht lockern |
 | 3.4 | Research-Evaluation mit eingefrorenen Snapshots und adversarialen News-/Tool-Antworten | 3.3 | Prompt-Injection erzeugt keine Tool-/Wallet-Berechtigung; Quellenbezüge/Schemakonformität und Manipulationsfälle messbar; Ablationen prüfen unabhängigen Zusatznutzen; LLM-Qualität separat von deterministischen Unit-Tests |
 
 Phasengrenze: nachvollziehbare Signale, keine Erlaubnis zum Signieren oder Senden.
@@ -201,7 +230,7 @@ Phasengrenze: keine Order kann die Risk-Engine umgehen. Kill-Switch blockiert ne
 | --- | --- | --- | --- |
 | 5.1 | Gemeinsames Order-/Fill-Ledger und PaperBroker hinter dem abgesicherten Ausführungszugang | 4.5 | Geld-/Token-Erhaltung, Gebühren, Reservierungen und Teilfills geprüft; niemals Signierer/Live-Endpunkt aufrufen |
 | 5.2 | Eventbasierten Backtest mit historischer Uhr, spätestem verfügbarem Snapshot und konservativem Fill-Modell implementieren | 2.3, 5.1 | Keine Ausführung vor Signalzeit; kein automatischer Buy-/Sell-Gewinn bei konstantem Kurs ohne passende Fills; Spread, Kosten, Slippage und Verzögerung wirksam |
-| 5.3 | Nettorendite, Drawdown aus Equity-Kurve, Profit Factor und Buy-and-Hold-Vergleich implementieren | 5.2 | Kleine handgerechnete Kontoverläufe stimmen; keine Trades/keine Verluste sauber als undefiniert behandeln, nicht künstlich auf Erfolg setzen |
+| 5.3 | Nettorendite, Equity-Drawdown, Profit Factor, Trefferquote, Erwartungswert/Trade, Signalqualität je Horizont und Ereignis-/Signal-/Ausführungslatenz; einfache Strategie-/Buy-and-Hold-Vergleiche | 5.2 | Kleine handgerechnete Kontoverläufe stimmen; undefinierte Kennzahlen und Nullfälle sauber behandeln, nicht künstlich auf Erfolg setzen |
 | 5.4 | Zeitlich getrennte Evaluationsdaten und Walk-forward-Bericht; Modell-/Prompt-/Datenversionen speichern | 5.3 | Keine Parameterwahl anhand des Testzeitraums; identische Zeit-/Kostenbasis für Benchmark; historische News ohne spätere Informationen |
 | 5.5 | Paper-Zyklus mit echten Read-only-Live-Daten über CLI starten, unterbrochene Datenfeeds und Neustarts testen | 5.4 | Mehrere vollständige Zyklen: Daten -> Signal -> Risiko -> virtuelle Fills -> Ledger; Ausfall, doppelte Events und Kill-Switch geprüft |
 
@@ -230,4 +259,12 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 
 ## Unmittelbar nächste Arbeit
 
-Die Schritte 1.1–1.6 und 2.1–2.5 sind implementiert und offline geprüft. Als Nächstes folgt 2.6: Originalquellen, datierte News-/Announcement-/Social-Ereignisse, Deduplizierung/Versionierung und first_seen/Neuigkeit nachvollziehbar erfassen. Die neuen contentgebundenen EvidenceReference-IDs sind dafür eine Grundlage, ersetzen aber keine semantischen Ereignisse oder unabhängigen Bestätigungen. Danach folgen On-Chain- und Liquiditätsfeeds sowie die neue Agentenstruktur aus `docs/ENGINE_ARCHITECTURE.md`. Die CoinGecko-Eignungsprüfung anhand offizieller SDK-Verträge ist dokumentiert; produktiver Zugang, Einheiten, Zeitgrenzen und historische Abdeckung müssen zusätzlich live bestätigt werden. Authentifizierte Live-Contract-Tests und eine vertrauenswürdige Jupiter-Blockzeitauflösung bleiben zusätzlich offen. Die ersten PRs sollen keine Broker-Ausführung anbinden und keine vermeintliche Profitabilität demonstrieren, sondern reproduzierbare Installation, korrekten Agentenlebenszyklus und einen belegbar kontrollierten Research-Ablauf liefern.
+Legacy 1.1–1.6 und 2.1–2.5 sind implementiert und offline geprüft. Nach dem erneuten
+Zielabgleich folgt **G1.1: providerneutraler Modellvertrag**, danach Rollenkonfiguration
+und Migration des bestehenden Swarms-Pfads sowie geprüfte lokale/Cloud-Adapter.
+Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
+Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
+oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige
+Jupiter-Blockzeitauflösung bleiben offen. [docs/GOAL_ALIGNMENT.md](docs/GOAL_ALIGNMENT.md)
+ist die aktuelle Aufgabenliste; zuerst den vorhandenen Kern erweitern, keine
+Ausführung anbinden und keine Profitabilität voraussetzen.

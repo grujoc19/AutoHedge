@@ -1,5 +1,12 @@
 # Fork development guide
 
+The [preserved user goal](docs/PROJECT_GOAL.md) and
+[current goal alignment/backlog](docs/GOAL_ALIGNMENT.md) define the seven target
+phases G1–G7. Numbered phase/step references below describe the earlier six-phase
+implementation history. Its stabilization is complete; provider-independent AI
+calls and model configuration per role are still missing from the expanded
+Foundation. The next implementation step is G1.1, reusing the existing core.
+
 ## Implemented scope
 
 The default workflow is research-only. Phase-1 steps 1.1–1.6 are implemented

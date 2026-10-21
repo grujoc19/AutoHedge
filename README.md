@@ -88,18 +88,28 @@ not supported trading entry points, and are excluded from the active lint scope.
 The planned engine roles, local/cloud routing, independent-evidence checks and
 minutes-to-hours strategy horizon are recorded in
 [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md). News Intelligence,
-Market Anomaly and On-Chain Intelligence will supply a Trading Director; a
-separate deterministic Risk Engine will control order eligibility. These roles
-and model routes are future work, not currently running agents.
+Market Anomaly, On-Chain Intelligence, Quant and an advisory Risk Manager will
+supply a Trading Director; a separate deterministic Risk Engine will control
+order eligibility. Event routing, structured role outputs and model routes are
+future work. The [user's goal definition](docs/PROJECT_GOAL.md) is preserved in
+the repository; the [goal alignment and prioritized backlog](docs/GOAL_ALIGNMENT.md)
+record what fits, what needs adjustment, and what is missing.
 
 ## Roadmap
 
-1. Stabilize lifecycle, configuration, dependencies, CI and orchestration.
-2. Normalize real market data and calculate indicators in Python.
-3. Produce validated BUY, SELL and HOLD proposals with supporting evidence.
-4. Enforce deterministic portfolio limits, liquidity checks and a kill-switch.
-5. Validate realistic backtesting and paper trading.
-6. Add recoverable operation and separately authorized live execution.
+1. Foundation: retain the stabilized research core; add provider-independent AI
+   calls and model configuration per role.
+2. Data Collection: persistent news collection, Binance WebSocket and DEX Screener,
+   reusing existing normalized market data, history, indicators and snapshots.
+3. AI Market Intelligence: local models, news classification, anomaly detection
+   and correlation with bounded costs and optional web research.
+4. On-Chain Intelligence: Helius/Solana events, wallets, swaps and pool activity.
+5. Trading Intelligence: event-driven roles and validated BUY/SELL/HOLD/NO TRADE
+   signals with evidence, uncertainty, expiry and invalidation conditions.
+6. Risk Management & Paper-Trading: deterministic limits, a kill-switch, paper
+   execution and reproducible strategy validation.
+7. Production Readiness: Docker deployment, recovery, monitoring, dashboard and
+   alerts; separately authorized live execution only after validation.
 
 Live trading must remain disabled by default. Any future activation requires
 explicit operator approval and a separate wallet with limited capital.
