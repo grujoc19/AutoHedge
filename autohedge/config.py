@@ -8,6 +8,14 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, ValidationError
 from pydantic import field_validator
 
+from autohedge.ai.config import (
+    AgentRole,
+    LEGACY_RESEARCH_ROLES,
+    ModelBackend,
+    RoleModelConfig,
+    RoleModels,
+)
+from autohedge.ai.contracts import ModelTarget, Seconds
 from autohedge.errors import ConfigurationError
 from autohedge.data.contracts import QualityPolicy
 
@@ -16,6 +24,9 @@ class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     openai_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    anthropic_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    gemini_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
+    deepseek_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     exa_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     jupiter_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     massive_api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
@@ -23,9 +34,10 @@ class Settings(BaseModel):
     solana_private_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     model: str = Field(default="gpt-4.1", min_length=1, max_length=100)
     sentiment_model: str = Field(default="gpt-4o-mini", min_length=1, max_length=100)
+    role_models: RoleModels = Field(default_factory=RoleModels)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_file: Path | None = None
-    request_timeout: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
+    request_timeout: Seconds = 30
     cycle_timeout: float = Field(default=180, gt=0, le=600, allow_inf_nan=False)
     search_enabled: bool = True
     exa_base_url: HttpUrl = HttpUrl("https://api.exa.ai")
@@ -36,6 +48,9 @@ class Settings(BaseModel):
 
     @field_validator(
         "openai_api_key",
+        "anthropic_api_key",
+        "gemini_api_key",
+        "deepseek_api_key",
         "exa_api_key",
         "jupiter_api_key",
         "massive_api_key",
@@ -45,6 +60,8 @@ class Settings(BaseModel):
     )
     @classmethod
     def blank_secrets(cls, value):
+        if isinstance(value, SecretStr) and not value.get_secret_value().strip():
+            return None
         if isinstance(value, str) and not value.strip():
             return None
         return value
@@ -78,6 +95,9 @@ class Settings(BaseModel):
             secret.get_secret_value()
             for name in (
                 "openai_api_key",
+                "anthropic_api_key",
+                "gemini_api_key",
+                "deepseek_api_key",
                 "exa_api_key",
                 "jupiter_api_key",
                 "massive_api_key",
@@ -87,7 +107,59 @@ class Settings(BaseModel):
             if (secret := getattr(self, name)) is not None
         )
 
+    def model_for(self, role: AgentRole | str) -> RoleModelConfig:
+        """Resolve a role without keys, SDK imports, environment changes or calls."""
+        try:
+            role = AgentRole(role)
+            profiles = RoleModels.model_validate(self.role_models)
+            override = getattr(profiles, role.value)
+            if override is not None:
+                values = override.model_dump()
+                if override.timeout_seconds is None:
+                    values["timeout_seconds"] = self.request_timeout
+                return RoleModelConfig.model_validate(values)
+            return RoleModelConfig(
+                target=ModelTarget(
+                    provider="openai",
+                    model=self.sentiment_model
+                    if role == AgentRole.NEWS_INTELLIGENCE
+                    else self.model,
+                ),
+                timeout_seconds=self.request_timeout,
+            )
+        except (ValueError, TypeError):
+            raise ConfigurationError("Invalid role model configuration") from None
+
+    def model_api_key(self, role: AgentRole | str) -> SecretStr | None:
+        backend = ModelBackend(self.model_for(role).target.provider)
+        return (
+            None
+            if backend == ModelBackend.OLLAMA
+            else getattr(self, f"{backend.value}_api_key")
+        )
+
+    def require_model_credentials(self, role: AgentRole | str):
+        backend = ModelBackend(self.model_for(role).target.provider)
+        if backend != ModelBackend.OLLAMA and not self.model_api_key(role):
+            raise ConfigurationError(
+                f"{backend.value.upper()}_API_KEY is required for the selected role"
+            )
+
+    def require_legacy_model_configuration(self):
+        """Never silently ignore a role override in the unmigrated Swarms path."""
+        try:
+            profiles = RoleModels.model_validate(self.role_models)
+        except (ValueError, TypeError):
+            raise ConfigurationError("Invalid role model configuration") from None
+        if any(
+            getattr(profiles, role.value) is not None for role in LEGACY_RESEARCH_ROLES
+        ):
+            raise ConfigurationError(
+                "Role-specific model settings are not yet supported by the research pipeline"
+            )
+
     def require_research_credentials(self):
+        self.require_legacy_model_configuration()
         if not self.openai_api_key:
             raise ConfigurationError(
                 "OPENAI_API_KEY is required for model-backed research"
@@ -109,6 +181,9 @@ class Settings(BaseModel):
 
 ENV_FIELDS = {
     "OPENAI_API_KEY": "openai_api_key",
+    "ANTHROPIC_API_KEY": "anthropic_api_key",
+    "GEMINI_API_KEY": "gemini_api_key",
+    "DEEPSEEK_API_KEY": "deepseek_api_key",
     "EXA_API_KEY": "exa_api_key",
     "JUPITER_API_KEY": "jupiter_api_key",
     "MASSIVE_API_KEY": "massive_api_key",
@@ -127,6 +202,13 @@ ENV_FIELDS = {
     "AUTOHEDGE_COINGECKO_BASE_URL": "coingecko_base_url",
 }
 
+ROLE_ENV_SUFFIXES = {
+    "PROVIDER": "provider",
+    "MODEL": "model",
+    "MAX_OUTPUT_TOKENS": "max_output_tokens",
+    "TIMEOUT": "timeout_seconds",
+}
+
 
 def load_settings(
     *, environ: Mapping[str, str] | None = None, env_file: Path | None = None
@@ -142,6 +224,7 @@ def load_settings(
     # Apply aliases within each source so process bindings also beat file aliases.
     aliases = {
         "AUTOHEDGE_OPENAI_API_KEY": "OPENAI_API_KEY",
+        "GOOGLE_API_KEY": "GEMINI_API_KEY",
         "POLYGON_BASE_URL": "MASSIVE_BASE_URL",
     }
     for alias, target in aliases.items():
@@ -154,6 +237,9 @@ def load_settings(
     }
     for name in (
         "openai_api_key",
+        "anthropic_api_key",
+        "gemini_api_key",
+        "deepseek_api_key",
         "exa_api_key",
         "jupiter_api_key",
         "massive_api_key",
@@ -164,8 +250,48 @@ def load_settings(
         if name in inputs and not inputs[name]:
             inputs[name] = None
     try:
+        role_env_names = {
+            f"AUTOHEDGE_{role.value.upper()}_{suffix}"
+            for role in AgentRole
+            for suffix in ROLE_ENV_SUFFIXES
+        }
+        role_prefixes = tuple(f"AUTOHEDGE_{role.value.upper()}_" for role in AgentRole)
+        for name in values:
+            if name.startswith("AUTOHEDGE_") and name not in ENV_FIELDS:
+                if (
+                    name.startswith(role_prefixes)
+                    or name.endswith(
+                        tuple("_" + suffix for suffix in ROLE_ENV_SUFFIXES)
+                    )
+                ) and name not in role_env_names:
+                    raise ConfigurationError("Unknown role model environment setting")
+        profiles = {}
+        for role in AgentRole:
+            prefix = f"AUTOHEDGE_{role.value.upper()}_"
+            fields = {
+                field: values[prefix + suffix]
+                for suffix, field in ROLE_ENV_SUFFIXES.items()
+                if prefix + suffix in values
+            }
+            if fields:
+                if any(value is None for value in fields.values()):
+                    raise ValueError("Role environment settings require values")
+                target = {
+                    "provider": fields.pop("provider", "openai"),
+                    "model": fields.pop("model", None),
+                }
+                tokens = fields.get("max_output_tokens")
+                if (
+                    isinstance(tokens, str)
+                    and tokens.strip().isascii()
+                    and tokens.strip().isdecimal()
+                ):
+                    fields["max_output_tokens"] = int(tokens)
+                profiles[role.value] = {"target": target, **fields}
+        if profiles:
+            inputs["role_models"] = profiles
         return Settings(**inputs)
-    except ValidationError:
+    except (ValidationError, ValueError, TypeError):
         raise ConfigurationError(
             "Invalid AutoHedge configuration; check environment settings"
         ) from None

@@ -20,6 +20,10 @@ class RuntimeTests(unittest.TestCase):
         )
         for name in (
             "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GEMINI_API_KEY",
+            "GOOGLE_API_KEY",
+            "DEEPSEEK_API_KEY",
             "AUTOHEDGE_OPENAI_API_KEY",
             "EXA_API_KEY",
             "JUPITER_API_KEY",
@@ -28,6 +32,9 @@ class RuntimeTests(unittest.TestCase):
             "COINGECKO_PRO_API_KEY",
         ):
             child_env.pop(name, None)
+        for name in tuple(child_env):
+            if name.startswith("AUTOHEDGE_"):
+                child_env.pop(name)
         with tempfile.TemporaryDirectory() as directory:
             # Stop dotenv discovery before it reaches a developer's real .env.
             pathlib.Path(directory, ".env").touch()
@@ -110,6 +117,58 @@ for module in ('swarms', 'litellm', 'openai', 'solders', 'autohedge.workers'):
 print('Independent model boundary passed')
 """)
         self.assertIn("Independent model boundary passed", output)
+
+    def test_role_configuration_drives_offline_gateway_without_cloud_credentials(self):
+        output = self.run_offline("""
+import os
+import sys
+from autohedge.ai import AgentRole, ModelMessage, ModelReply, ModelRequest, TokenUsage, complete_model
+from autohedge.config import load_settings
+from autohedge.errors import ConfigurationError
+before = dict(os.environ)
+environ = {}
+for role in AgentRole:
+    prefix = 'AUTOHEDGE_' + role.value.upper() + '_'
+    environ[prefix + 'PROVIDER'] = 'ollama'
+    environ[prefix + 'MODEL'] = 'fixture-' + role.value
+    environ[prefix + 'MAX_OUTPUT_TOKENS'] = '200'
+    environ[prefix + 'TIMEOUT'] = '10'
+settings = load_settings(environ=environ)
+class ScriptedProvider:
+    calls = 0
+    def complete(self, request):
+        self.calls += 1
+        assert request.target.provider == 'ollama'
+        assert request.max_output_tokens == 200
+        assert request.timeout_seconds == 10
+        return ModelReply(
+            request_id=request.request_id, target=request.target,
+            finish_reason='complete', content='Offline assessment only.',
+            usage=TokenUsage(status='unknown'),
+        )
+provider = ScriptedProvider()
+for role in AgentRole:
+    settings.require_model_credentials(role)
+    assert settings.model_api_key(role) is None
+    request = ModelRequest(
+        messages=(ModelMessage(role='user', content='Frozen evidence'),),
+        **settings.model_for(role).model_dump(),
+    )
+    result = complete_model(provider, request)
+    assert result.reply.target.model == 'fixture-' + role.value
+assert provider.calls == 6
+try:
+    settings.require_research_credentials()
+except ConfigurationError as error:
+    assert 'Role-specific' in str(error)
+else:
+    raise AssertionError('Legacy research must not ignore role profiles')
+assert dict(os.environ) == before
+for module in ('swarms', 'litellm', 'openai', 'anthropic', 'solders'):
+    assert module not in sys.modules, module
+print('Role configuration and offline gateway passed')
+""")
+        self.assertIn("Role configuration and offline gateway passed", output)
 
     def test_real_agents_conversation_and_tool_schemas(self):
         output = self.run_offline("""

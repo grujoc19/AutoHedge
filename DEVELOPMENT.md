@@ -3,11 +3,13 @@
 The [preserved user goal](docs/PROJECT_GOAL.md) and
 [current goal alignment/backlog](docs/GOAL_ALIGNMENT.md) define the seven target
 phases G1–G7. Numbered phase/step references below describe the earlier six-phase
-implementation history. Its stabilization is complete; production provider
-adapters and model configuration per role are still missing from the expanded
-Foundation. G1.1 adds the [provider-neutral model contract](docs/MODEL_CALLS.md)
-and a validated single-call boundary without changing the research path. The
-next implementation step is G1.2, model/provider configuration per role.
+implementation history. Its stabilization is complete. G1.1 adds the
+[provider-neutral model contract](docs/MODEL_CALLS.md); G1.2 adds immutable
+[model/provider profiles for six roles](docs/MODEL_CONFIGURATION.md), including
+legacy fallbacks and selected-provider credential checks. Actual provider adapters
+and research integration are still missing. The next step is G1.3, migrating the
+existing Swarms/OpenAI path. Until then, explicit profiles for active research
+roles are rejected before agent construction, never silently ignored.
 
 ## Implemented scope
 

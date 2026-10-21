@@ -98,8 +98,12 @@ record what fits, what needs adjustment, and what is missing.
 The SDK-independent [model-call contract](docs/MODEL_CALLS.md) now provides
 validated requests/replies, correlated results, safe failure codes and explicit
 known/partial/unknown token usage. Its call boundary performs no retries or
-fallbacks. Role configuration, real provider adapters and migration of the
-existing research agents are the next steps; no model route has changed yet.
+fallbacks. Immutable [role profiles](docs/MODEL_CONFIGURATION.md) now configure
+provider, model and call limits for all six roles while preserving legacy defaults.
+Keys are checked only for the selected backend; local profiles need no cloud key.
+Actual adapters and research migration come next. Active-role overrides currently
+stop the unmigrated research path before agent construction; no setting is silently
+ignored and no model route has changed yet.
 
 ## Roadmap
 

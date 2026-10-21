@@ -20,6 +20,7 @@ def build_agent_team(
     now: datetime | None = None, *, settings: Settings | None = None
 ) -> AgentTeam:
     settings = settings if settings is not None else load_settings()
+    settings.require_legacy_model_configuration()
     now = now if now is not None else datetime.now(timezone.utc)
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("Agent timestamps must be timezone-aware")

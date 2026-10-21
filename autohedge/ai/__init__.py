@@ -1,6 +1,13 @@
 """Provider-neutral model contracts; importing this package initializes no SDK."""
 
 from autohedge.ai.client import ModelProvider, complete_model
+from autohedge.ai.config import (
+    AgentRole,
+    ModelBackend,
+    RoleModelConfig,
+    RoleModelOverride,
+    RoleModels,
+)
 from autohedge.ai.contracts import (
     ModelMessage,
     ModelReply,
@@ -12,6 +19,8 @@ from autohedge.ai.contracts import (
 from autohedge.ai.errors import ModelCallError, ModelErrorCode
 
 __all__ = [
+    "AgentRole",
+    "ModelBackend",
     "ModelCallError",
     "ModelErrorCode",
     "ModelMessage",
@@ -20,6 +29,9 @@ __all__ = [
     "ModelRequest",
     "ModelResult",
     "ModelTarget",
+    "RoleModelConfig",
+    "RoleModelOverride",
+    "RoleModels",
     "TokenUsage",
     "complete_model",
 ]

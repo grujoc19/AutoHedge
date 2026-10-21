@@ -1,13 +1,13 @@
 # Providerneutrale Modellaufrufe (G1.1)
 
 Der Baustein [autohedge.ai](../autohedge/ai/__init__.py) definiert den gemeinsamen
-Vertrag für spätere Modelladapter. Er lädt weder Swarms/LiteLLM noch
-Provider-SDKs, Konfiguration oder Credentials und führt beim Import keine
+Vertrag für spätere Modelladapter. Er lädt weder Swarms/LiteLLM noch Provider-SDKs,
+liest keine Konfigurationsdateien oder Credentials und führt beim Import keine
 Netzwerkaufrufe aus. Es wurden keine neuen Abhängigkeiten hinzugefügt.
 
 **Stand:** Verträge, validierte Aufrufgrenze und ein geskripteter Test-Fake sind
-implementiert. Rollen-Konfiguration, echte OpenAI-/Ollama-/weitere Adapter und
-Anbindung an die Research-Pipeline folgen in G1.2–G1.5. Die bestehenden
+implementiert. [G1.2](MODEL_CONFIGURATION.md) ergänzt Rollen-Konfiguration und
+gezielte Credential-Prüfung; echte Adapter und Research-Anbindung folgen in G1.3–G1.5. Die bestehenden
 Research-Agenten verwenden diesen Pfad noch nicht. Das Modul unterstützt
 zunächst Textantworten; Tool-Calls, Streaming und multimodale Inhalte sind
 kein Teil dieses Vertrags. Der bestehende Exa-/Swarms-Pfad bleibt erhalten;
@@ -118,6 +118,7 @@ Verträge außerhalb des Checkouts.
 .venv/bin/python -m unittest discover -s tests/unit -p 'test_model*.py' -v
 ```
 
-Nächster Schritt: G1.2, Provider-/Modellkonfiguration für alle sechs Rollen unter
-Erhalt der bisherigen Modellvariablen. G1.1 allein ändert keine Handelsentscheidung,
-keine Agentenberechtigung und aktiviert keine entfernten Modelle.
+G1.2, [Provider-/Modellkonfiguration für alle sechs Rollen](MODEL_CONFIGURATION.md),
+ist inzwischen implementiert. Nächster Schritt ist G1.3, die kontrollierte
+Swarms/OpenAI-Anbindung. Modellverträge und Profile allein ändern keine
+Handelsentscheidung oder Agentenberechtigung und aktivieren keine entfernten Modelle.

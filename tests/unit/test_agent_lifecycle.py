@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from autohedge.config import Settings
-from autohedge.errors import ProviderError
+from autohedge.errors import ConfigurationError, ProviderError
 from autohedge.workers import build_agent_team
 
 
@@ -16,6 +16,21 @@ class FakeAgent:
 
 
 class AgentLifecycleTests(unittest.TestCase):
+    def test_role_overrides_fail_before_any_legacy_agent_is_constructed(self):
+        for role in ("quant", "news_intelligence", "trading_director", "risk_manager"):
+            settings = Settings(
+                role_models={
+                    role: {"target": {"provider": "openai", "model": "new-role-model"}}
+                }
+            )
+            with patch("autohedge.workers.Agent") as agent:
+                with (
+                    self.subTest(role=role),
+                    self.assertRaisesRegex(ConfigurationError, "Role-specific"),
+                ):
+                    build_agent_team(settings=settings)
+                agent.assert_not_called()
+
     def test_tool_failure_is_recorded_even_if_a_framework_swallows_the_exception(self):
         team = self.build()
         tool = team.sentiment.kwargs["tools"][0]

@@ -8,6 +8,7 @@ from pydantic import AwareDatetime, BeforeValidator, Field, StrictInt, model_val
 from autohedge.contracts import Contract, reject_bool
 
 TokenCount = Annotated[StrictInt, Field(ge=0)]
+OutputTokenLimit = Annotated[StrictInt, Field(ge=1, le=32_768)]
 Seconds = Annotated[
     float, BeforeValidator(reject_bool), Field(gt=0, le=120, allow_inf_nan=False)
 ]
@@ -30,7 +31,7 @@ class ModelRequest(Contract):
     messages: Annotated[
         tuple[ModelMessage, ...], Field(min_length=1, max_length=64, repr=False)
     ]
-    max_output_tokens: Annotated[StrictInt, Field(ge=1, le=32_768)] = 1500
+    max_output_tokens: OutputTokenLimit = 1500
     timeout_seconds: Seconds = 30
 
     @model_validator(mode="after")

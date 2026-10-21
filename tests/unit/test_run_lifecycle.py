@@ -37,6 +37,25 @@ def make_team(calls, fail=None):
 
 
 class RunLifecycleTests(unittest.TestCase):
+    def test_local_profile_cannot_silently_call_openai_through_the_default_pipeline(
+        self,
+    ):
+        settings = Settings(
+            role_models={
+                "quant": {"target": {"provider": "ollama", "model": "local-quant"}}
+            }
+        )
+        settings.require_model_credentials("quant")
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch("autohedge.workers.build_agent_team") as factory,
+        ):
+            system = AutoHedge(output_dir=directory, settings=settings)
+            with self.assertRaisesRegex(ConfigurationError, "Role-specific"):
+                system.run_report("research")
+            factory.assert_not_called()
+            self.assertIsNone(system.last_report)
+
     def test_missing_credentials_fail_before_default_team_construction(self):
         with (
             tempfile.TemporaryDirectory() as directory,

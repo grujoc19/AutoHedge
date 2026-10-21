@@ -55,6 +55,10 @@ def main():
         )
         for name in (
             "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GEMINI_API_KEY",
+            "GOOGLE_API_KEY",
+            "DEEPSEEK_API_KEY",
             "AUTOHEDGE_OPENAI_API_KEY",
             "EXA_API_KEY",
             "JUPITER_API_KEY",
@@ -63,6 +67,9 @@ def main():
             "COINGECKO_PRO_API_KEY",
         ):
             child_env.pop(name, None)
+        for name in tuple(child_env):
+            if name.startswith("AUTOHEDGE_"):
+                child_env.pop(name)
         subprocess.run(
             [
                 str(python),
@@ -84,6 +91,7 @@ from autohedge.data.coingecko import CoinGeckoCandleProvider
 from autohedge.data.history import HistoryStore
 from autohedge.config import Settings
 from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, complete_model
+from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
 from autohedge.indicators import IndicatorConfig, calculate_indicators
 from autohedge.snapshots import build_research_snapshot, collect_research_snapshot, parse_research_snapshot
 assert IndicatorConfig().minimum_candles == 34
@@ -93,6 +101,12 @@ request = ModelRequest(
 )
 assert request.max_output_tokens == 1500
 assert TokenUsage(status="unknown").total_tokens is None
+local = Settings(role_models=RoleModels(news_intelligence=RoleModelOverride(
+    target=ModelTarget(provider="ollama", model="offline-local"),
+)))
+local.require_model_credentials(AgentRole.NEWS_INTELLIGENCE)
+assert local.model_api_key(AgentRole.NEWS_INTELLIGENCE) is None
+assert local.model_for(AgentRole.NEWS_INTELLIGENCE).target.model == "offline-local"
 assert "swarms" not in sys.modules
 assert "litellm" not in sys.modules
 assert CoinGeckoCandleProvider(Settings()).max_pages == 10
