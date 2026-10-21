@@ -95,6 +95,12 @@ future work. The [user's goal definition](docs/PROJECT_GOAL.md) is preserved in
 the repository; the [goal alignment and prioritized backlog](docs/GOAL_ALIGNMENT.md)
 record what fits, what needs adjustment, and what is missing.
 
+The SDK-independent [model-call contract](docs/MODEL_CALLS.md) now provides
+validated requests/replies, correlated results, safe failure codes and explicit
+known/partial/unknown token usage. Its call boundary performs no retries or
+fallbacks. Role configuration, real provider adapters and migration of the
+existing research agents are the next steps; no model route has changed yet.
+
 ## Roadmap
 
 1. Foundation: retain the stabilized research core; add provider-independent AI

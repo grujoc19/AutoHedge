@@ -7,9 +7,11 @@ Der [aktuelle Zielabgleich](docs/GOAL_ALIGNMENT.md) dokumentiert belegten Ist-St
 Lücken, Anpassungen und die neue Reihenfolge **G1–G7**. Unpräfixierte IDs unten
 bezeichnen weiterhin die alten sechs Phasen und werden nicht still umnummeriert.
 
-Nächste Arbeit ist **G1.1: providerneutraler Modellvertrag**. Die bisherige
-Stabilisierung ist abgeschlossen; Provider-/Rollenabstraktion gehört nach der
-neuen Zieldefinition ebenfalls zur Foundation und fehlt noch. Danach folgen
+G1.1, der [providerneutrale Modellvertrag](docs/MODEL_CALLS.md), ist inzwischen
+implementiert und offline geprüft, aber noch nicht im Research-Pfad eingebunden.
+Nächste Arbeit ist **G1.2: Provider-/Modellkonfiguration je Rolle**. Die bisherige
+Stabilisierung ist abgeschlossen; Provider-Anbindung und Rollen-Konfiguration
+gehören nach der neuen Zieldefinition ebenfalls zur Foundation und fehlen noch. Danach folgen
 persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
@@ -260,8 +262,10 @@ Vor irgendeinem echten Trade müssen alle folgenden Nachweise vorliegen:
 ## Unmittelbar nächste Arbeit
 
 Legacy 1.1–1.6 und 2.1–2.5 sind implementiert und offline geprüft. Nach dem erneuten
-Zielabgleich folgt **G1.1: providerneutraler Modellvertrag**, danach Rollenkonfiguration
-und Migration des bestehenden Swarms-Pfads sowie geprüfte lokale/Cloud-Adapter.
+Zielabgleich ist **G1.1: providerneutraler Modellvertrag** implementiert: validierte
+Einmalaufrufe, sichere Fehler und explizite Usage-Ungewissheit. Als Nächstes folgt
+G1.2, die Rollenkonfiguration, danach Migration des bestehenden Swarms-Pfads und
+geprüfte lokale/Cloud-Adapter.
 Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
 oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige

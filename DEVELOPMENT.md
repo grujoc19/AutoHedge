@@ -3,9 +3,11 @@
 The [preserved user goal](docs/PROJECT_GOAL.md) and
 [current goal alignment/backlog](docs/GOAL_ALIGNMENT.md) define the seven target
 phases G1–G7. Numbered phase/step references below describe the earlier six-phase
-implementation history. Its stabilization is complete; provider-independent AI
-calls and model configuration per role are still missing from the expanded
-Foundation. The next implementation step is G1.1, reusing the existing core.
+implementation history. Its stabilization is complete; production provider
+adapters and model configuration per role are still missing from the expanded
+Foundation. G1.1 adds the [provider-neutral model contract](docs/MODEL_CALLS.md)
+and a validated single-call boundary without changing the research path. The
+next implementation step is G1.2, model/provider configuration per role.
 
 ## Implemented scope
 

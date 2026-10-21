@@ -1,7 +1,8 @@
 # Zielabgleich und verbindlicher Arbeitsstand
 
-Stand: **21. Oktober 2026**, geprüft gegen Code-Commit `68f97dc` auf
-`feat/stabilize-research-core`. Die [erneut bereitgestellte Zieldefinition](PROJECT_GOAL.md)
+Stand: **21. Oktober 2026**, Basisabgleich gegen Code-Commit `68f97dc` auf
+`feat/stabilize-research-core`, anschließend um **G1.1** fortgeschrieben.
+Die [erneut bereitgestellte Zieldefinition](PROJECT_GOAL.md)
 ist die fachliche Grundlage. Sie ist bis auf normalisierte Zeilenenden im Original
 gespeichert. Dieser Abgleich beschreibt den Ist-Stand und die daraus folgenden
 Arbeitspakete; [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md) beschreibt das Zielbild.
@@ -11,8 +12,10 @@ Die früheren Review-Befunde und Schritt-IDs bleiben im
 **Ergebnis:** Ein getesteter Daten-/Research-Kern ist vorhanden und wird weiterverwendet.
 Ein autonomes Trading-System ist noch nicht implementiert. Die bisherige
 Stabilisierung ist abgeschlossen, die in der neuen Definition zusätzlich verlangte
-KI-Provider-Abstraktion der Foundation jedoch offen. Als Nächstes schließen wir
-diese Lücke, bevor wir weitere Datenquellen und Intelligence-Rollen anschließen.
+KI-Provider-Abstraktion der Foundation jedoch noch nicht vollständig umgesetzt.
+G1.1 liefert inzwischen den SDK-unabhängigen Modellvertrag und eine validierte
+Aufrufgrenze; der bestehende Research-Pfad verwendet sie noch nicht. Als Nächstes
+folgt G1.2, die Provider-/Modellkonfiguration je Rolle.
 
 ## 1. Was bereits passt und erhalten bleibt
 
@@ -25,6 +28,7 @@ Strategie validiert. Prototypen unter `experimental/` zählen nicht als fertige 
 | Bestehenden Fork stabilisieren statt neu schreiben | Frische Swarms-Teams pro Lauf, expliziter Orchestrator, getrennte Reports; [main.py](../autohedge/main.py), [workers.py](../autohedge/workers.py), [Orchestrierung](../autohedge/orchestration.py) | Funktionierenden Forschungsablauf hinter kompatibler Fassade erhalten; ereignisgesteuerten Ablauf separat einführen |
 | Reproduzierbare Installation, modulare Struktur und Tests | [pyproject.toml](../pyproject.toml), [uv.lock](../uv.lock), [CI](../.github/workflows/ci.yml), Unit-/Runtime-/Importtests | Kein vollständiger Rewrite und zunächst ein modularer Python-Prozess; CI-Matrix ist konfiguriert, ihre Remote-Ergebnisse hier nicht bestätigt |
 | Zentrale API-Konfiguration, sichere Logs und Fehler | [Settings](../autohedge/config.py), [Logging](../autohedge/logging.py), [HTTP-Transport](../autohedge/providers.py) | Secrets redigieren, Timeouts und begrenzte Read-Retries übernehmen; neue Daten-/Modellanbieter ergänzen |
+| Providerneutraler Modellvertrag (G1.1) | [autohedge.ai](../autohedge/ai/__init__.py): unveränderliche Requests/Replies, korrelierte Ergebnisse, sichere Fehler, bekannte/teilweise/unbekannte Usage; [Details](MODEL_CALLS.md) | Offline-Fake und einmaliger validierter Aufruf vorhanden; Rollen-Konfiguration und echte SDK-Adapter bleiben offen |
 | Strikte normalisierte Daten | [Datenverträge](../autohedge/data/contracts.py), [Qualitätsprüfung](../autohedge/data/quality.py) | Instrument-/Währungsidentität, UTC-Zeiten, explizite Volumeneinheiten, Lücken-/Altersprüfung übernehmen; Orderbuch-, Trade-, Pool- und On-Chain-Verträge fehlen |
 | Echte lesende Datenadapter | [Jupiter](../autohedge/data/jupiter.py), [Exa](../autohedge/data/exa.py), [CoinGecko](../autohedge/data/coingecko.py) | Adapter mit Offline-HTTP-Fixtures vorhanden; keine authentifizierten Live-Contract-Tests. Jupiter braucht zusätzlich einen vertrauenswürdigen Blockzeitresolver; CoinGecko Pro passende Berechtigungen |
 | Historische Candles und zeitgebundene Wiederholung | Pagination, unveränderlicher dateibasierter [HistoryStore](../autohedge/data/history.py) | Historien und Abrufprovenienz erhalten; kein Ersatz für Ereignisdatenbank, Portfolio-Ledger oder kausalen Strategie-Backtest |
@@ -42,7 +46,7 @@ Strategie validiert. Prototypen unter `experimental/` zählen nicht als fertige 
 | Signale | [Action/Signal](../autohedge/domain.py) kennen BUY/SELL/HOLD, Instrument, Erstellzeit, Begründung und Konfidenz; sie sind nicht in den Agentenlauf integriert | **NO TRADE** ergänzen; Evidenz, Ablaufzeit, Horizont und Invalidierungsbedingungen verbindlich machen. HOLD = Bestand bewusst halten; NO TRADE = keine ausreichend belegte neue Gelegenheit / keine Analysefreigabe. Beide erzeugen keine neue Order. Aktuelle Fehler werfen weiterhin Fehler, sie erzeugen noch kein typisiertes NO TRADE |
 | Datenquellen und Reihenfolge | Schwerpunkt bisher Solana-Historie, Jupiter und Exa; weitere Feeds nur allgemein geplant | Nach Foundation zuerst News Collector, **Binance WebSocket und DEX Screener**. Coinbase, GeckoTerminal, Originalquellen und Solana-/Helius-Streams in getrennten Schritten ergänzen; bestehende Solana-Historie weiterverwenden |
 | Asset-/Venue-Umfang | Solana-Spot als erster möglicher Ausführungsbereich | Intelligence darf CEX-/Makro-Daten einbeziehen. CEX-Symbol, Solana-Mint, Pool und Quote-Währung explizit zuordnen; Binance-/Coinbase-Datenfeeds autorisieren keine CEX-Trades. Keine stillschweigende Gleichsetzung von USD und Stablecoins |
-| Modellrouting | Ein Hauptmodell und ein Sentiment-Modell; Laufpfad verlangt OpenAI-Key. LiteLLM ist eine transitive Swarms-Abhängigkeit | Providerunabhängige Schnittstelle, Modell/Provider je Rolle, OpenAI/Anthropic/Gemini/DeepSeek/Ollama über geprüfte Adapter. Eine installierte LiteLLM-Abhängigkeit allein erfüllt das nicht |
+| Modellrouting | Bestehender Laufpfad: ein Hauptmodell und ein Sentiment-Modell, OpenAI-Key erforderlich. G1.1-Vertrag separat vorhanden; LiteLLM ist eine transitive Swarms-Abhängigkeit | Vertrag durch Rollen-Konfiguration und geprüfte OpenAI/Anthropic/Gemini/DeepSeek/Ollama-Adapter nutzbar machen. Eine installierte LiteLLM-Abhängigkeit allein erfüllt das nicht |
 | Recherche und Kosten | Legacy-Research aktiviert Exa standardmäßig; Snapshot-Teams deaktivieren zusätzliche Suche bereits. Der Collector akzeptiert jeden passenden NewsProvider, verlangt standardmäßig News | RSS/Originalquellen werden die Grundversorgung, **Exa bleibt optionale Vertiefung**. Optionale Exa-Suche bedeutet nicht, dass eine News-Strategie ohne erforderliche News handeln darf. Bedarf und Frische je Strategie festlegen; keine stillschweigende Lockerung der Snapshot-Prüfungen |
 | Aufrufgrenzen versus Kostenkontrolle | Modell-/Tool-Retries und Turns begrenzt; Laufdeadline vor/nach synchronen Aufrufen geprüft | Token-/Kostenverbrauch pro Rolle und Lauf, persistente Tages-/Monatsbudgets, sichere Analyse-Caches und begrenzte Eskalation fehlen. Deadline ist keine harte Unterbrechung eines hängenden Custom-Agenten |
 | Speicherung | Historien als unveränderliche JSON-Dateien; JSON-Report nur bei konfiguriertem Ausgabepfad | Persistente Datenbank für Quellen, versionierte Ereignisse, Analysen, Budgets und Audit; später Portfolio/Orders/Fills. Vorhandene Historien referenzieren, keine parallele Neuentwicklung derselben Historienablage |
@@ -98,7 +102,7 @@ wie `2.6` in älteren Texten sind **Legacy-IDs**, keine neue Phasennummerierung.
 
 | Zielphase | Status heute | Bezug zum bisherigen Plan |
 | --- | --- | --- |
-| G1 Foundation | Stabilisierung vorhanden, Provider-/Rollenabstraktion offen | Legacy 1.1–1.6 erhalten; Grundlagen aus 3.1a/3.3 vorziehen |
+| G1 Foundation | Stabilisierung und G1.1-Modellvertrag vorhanden; Rollen-Konfiguration/Provider-Anbindung offen | Legacy 1.1–1.6 erhalten; Grundlagen aus 3.1a/3.3 vorziehen |
 | G2 Data Collection | Verträge, drei Read-Adapter, Historie und Snapshots vorhanden; kontinuierliche Collector/DB/WS fehlen | Legacy 2.1–2.5 erhalten; 2.6/2.8 konkretisieren und aufteilen |
 | G3 AI Market Intelligence | Indikatoren vorhanden; lokale Analyse, News-Klassifikation, Anomaly Detection und Korrelation fehlen | Legacy 3.1a–3.1c und 3.3 |
 | G4 On-Chain Intelligence | Fehlt | Legacy 2.7 und 3.1d |
@@ -109,14 +113,14 @@ wie `2.6` in älteren Texten sind **Legacy-IDs**, keine neue Phasennummerierung.
 ## 6. Priorisierte, kleine Arbeitspakete
 
 Reihenfolge innerhalb einer Phase ist die Arbeitsreihenfolge. **Nächster
-Implementierungsschritt ist G1.1**, kein Neustart der bereits getesteten Foundation.
+Implementierungsschritt ist G1.2**, kein Neustart der bereits getesteten Foundation.
 Die späteren Gruppen sind ein Backlog; sie werden nicht gleichzeitig begonnen.
 Jeder Schritt erhält passende Unit-/Integrationstests und einen kleinen
 reviewbaren Commit/Feature-PR. Kein automatischer Merge, keine Live-Aktivierung.
 
 | ID / Priorität | Geplanter Schritt | Abhängigkeit und konkrete Abnahme |
 | --- | --- | --- |
-| G1.1 / P1 | Providerneutralen Modellaufruf-/Ergebnis-/Fehlervertrag samt Fake definieren; Usage und Modellidentität erfassen | Bestehende Settings/Fehler nutzen. Ohne Netzwerk testbar; Timeout, ungültige Ausgabe und unbekannte Usage sind explizite Zustände |
+| G1.1 / umgesetzt | Providerneutraler Modellaufruf-/Ergebnis-/Fehlervertrag samt Test-Fake; Usage, Modellidentität und Fristen erfasst | [Modellverträge](MODEL_CALLS.md); Offline-Abnahme für Timeout, unbekannte Usage, falsche IDs, ungültige/abgeschnittene/verweigerte Antworten und keine Retries vorhanden. Nutzt bestehende Contract-/Fehlerbasis, noch keine Research-Anbindung |
 | G1.2 / P1 | Provider-/Modellkonfiguration für alle sechs Rollen, alte Modellvariablen kompatibel abbilden | G1.1; lokale Rolle benötigt keinen OpenAI-Key, fremde Secrets erscheinen nicht in Logs/Reports; bestehender Research-Lauf bleibt testbar |
 | G1.3 / P1 | Vorhandenen Swarms/OpenAI-Pfad hinter die Schnittstelle setzen | G1.2; bisherige Lifecycle-/Snapshot-/Fehlertests bestehen, keine Ausführungstools und keine zusätzlichen versteckten Modellaufrufe |
 | G1.4 / P1 | Ollama-Adapter mit denselben Verträgen ergänzen | G1.3; gemockter lokaler Server prüft gültige Ausgabe, Timeout, Ausfall und kaputtes JSON; kein automatischer unbudgetierter Cloud-Fallback |
@@ -150,16 +154,17 @@ Persistenz, Tests, CI und die bisherigen Architektur-/Planungsdokumente geprüft
 Der ursprüngliche Review von PR #1 bleibt im Entwicklungsplan erhalten; der PR
 ist bereits als `9027880` gemerged und wird nicht nochmals als offene Arbeit geführt.
 
-Am 21. Oktober 2026 auf Python 3.12 erneut ausgeführt:
+Basisabgleich am 21. Oktober 2026: 139 Unit-, 5 Runtime-Integrations- und 1 Importtest
+bestanden. Nach G1.1 auf Python 3.12 erneut ausgeführt:
 
-- **139 Unit-Tests, 5 Runtime-Integrationstests und 1 Importtest bestanden.**
+- **160 Unit-Tests, 6 Runtime-Integrationstests und 1 Importtest bestanden.**
 - Runtime-Tests verwenden installierte Swarms-Pakete mit Fake-Modellantworten und
   gesperrten Netzwerkverbindungen. Providerdaten stammen aus HTTP-Fixtures.
 - Keine echten Modell-/Marktdatenaufrufe, Wallet-Zugriffe oder Orders; die
   Cloud-Umgebung meldet aktuell keine konfigurierten Secrets.
 
-Dieser Commit ändert ausschließlich Dokumentation. Die Tests belegen den
-bestehenden Kern, keine der hier als fehlend markierten Funktionen. Nach jedem
+G1.1 erweitert den Kern um Modellverträge, keinen echten Modelladapter und keine
+Handelsfunktion. Die Tests belegen keine der hier als fehlend markierten Funktionen. Nach jedem
 Implementierungsschritt Status, Belege und Abnahmen dieses Dokuments aktualisieren;
 neue Wünsche in der Zieldefinition beziehungsweise einem begründeten Änderungsstand
 festhalten. Priorität bleibt: Intelligence und messbare Qualität aufbauen,

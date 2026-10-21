@@ -37,8 +37,10 @@ Die KI-Schnittstelle soll OpenAI, Anthropic, Google Gemini, DeepSeek und lokale
 Ollama-Modelle unterstützen und über LiteLLM erweiterbar sein. Provider, Modell
 und Einstellungen sind je Rolle über zentrale Konfiguration wählbar. Die
 vorhandene transitive LiteLLM-Abhängigkeit und zwei Modellnamen erfüllen das
-noch nicht. Diese Foundation-Lücke wird vor weiteren Intelligence-Schritten
-geschlossen. Ein lokaler Provider erfordert keinen OpenAI-Key.
+noch nicht. [G1.1](MODEL_CALLS.md) implementiert bereits SDK-unabhängige Verträge,
+Usage-Ungewissheit und validierte Einmalaufrufe; die Research-Anbindung fehlt noch.
+Als Nächstes folgt G1.2, die Konfiguration je Rolle. Ein lokaler Provider darf
+keinen OpenAI-Key erfordern.
 
 ## Datenfluss und feste Ausführungsgrenze
 
@@ -212,7 +214,7 @@ Legacy-Referenzen und werden dort auf die sieben neuen Phasen abgebildet.
 
 | Zielphase | Nächste Aufgaben | Wiederverwendung |
 | --- | --- | --- |
-| G1 Foundation | Providervertrag, sechs Rollenkonfigurationen, Swarms-Brücke, lokale/Cloud-Adapter | Settings, gemeinsame Fehler, Lifecycle-Tests |
+| G1 Foundation | Providervertrag umgesetzt; als Nächstes sechs Rollenkonfigurationen, danach Swarms-Brücke und lokale/Cloud-Adapter | Settings, gemeinsame Fehler, Lifecycle-Tests |
 | G2 Data Collection | Ereignisspeicher, RSS, Binance und DEX Screener, weitere Quellen einzeln | Datenverträge, HTTP-Transport, HistoryStore und Snapshot |
 | G3 Market Intelligence | Budgets/Cache, News-Klassifikation, statistische Anomalien, später lokale ML | Indikatoren, Sentiment-/Exa-Kern, Qualitätsregeln |
 | G4 On-Chain Intelligence | RPC/Helius, Ereignisklassifikation und Python-Muster | Solana-Identität, Zeit-/Evidenzverträge |

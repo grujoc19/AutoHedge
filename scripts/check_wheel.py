@@ -83,10 +83,18 @@ assert Path(autohedge.__file__).resolve().is_relative_to(Path(sys.prefix).resolv
 from autohedge.data.coingecko import CoinGeckoCandleProvider
 from autohedge.data.history import HistoryStore
 from autohedge.config import Settings
+from autohedge.ai import ModelMessage, ModelRequest, ModelTarget, TokenUsage, complete_model
 from autohedge.indicators import IndicatorConfig, calculate_indicators
 from autohedge.snapshots import build_research_snapshot, collect_research_snapshot, parse_research_snapshot
 assert IndicatorConfig().minimum_candles == 34
+request = ModelRequest(
+    target=ModelTarget(provider="fixture", model="offline"),
+    messages=(ModelMessage(role="user", content="Installed contract check"),),
+)
+assert request.max_output_tokens == 1500
+assert TokenUsage(status="unknown").total_tokens is None
 assert "swarms" not in sys.modules
+assert "litellm" not in sys.modules
 assert CoinGeckoCandleProvider(Settings()).max_pages == 10
 assert HistoryStore("history").directory == Path("history")
 from autohedge import AutoHedge

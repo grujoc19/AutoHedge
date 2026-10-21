@@ -78,6 +78,39 @@ assert 'solders' not in sys.modules
                 self.assertIn("autohedge", output.lower())
                 self.assertNotIn("OPENAI_API_KEY", output)
 
+    def test_model_boundary_needs_no_sdk_credentials_or_network(self):
+        output = self.run_offline("""
+import sys
+from autohedge.ai import (
+    ModelMessage, ModelReply, ModelRequest, ModelTarget, TokenUsage, complete_model,
+)
+class ScriptedProvider:
+    calls = 0
+    def complete(self, request):
+        self.calls += 1
+        return ModelReply(
+            request_id=request.request_id,
+            target=request.target,
+            finish_reason='complete',
+            content='Offline evidence assessment.',
+            usage=TokenUsage(status='unknown'),
+        )
+provider = ScriptedProvider()
+request = ModelRequest(
+    target=ModelTarget(provider='ollama', model='offline-fixture'),
+    messages=(ModelMessage(role='user', content='Assess supplied evidence.'),),
+)
+result = complete_model(provider, request)
+assert provider.calls == 1
+assert result.reply.usage.status == 'unknown'
+assert result.reply.usage.total_tokens is None
+assert result.reply.target == request.target
+for module in ('swarms', 'litellm', 'openai', 'solders', 'autohedge.workers'):
+    assert module not in sys.modules, module
+print('Independent model boundary passed')
+""")
+        self.assertIn("Independent model boundary passed", output)
+
     def test_real_agents_conversation_and_tool_schemas(self):
         output = self.run_offline("""
 import json
