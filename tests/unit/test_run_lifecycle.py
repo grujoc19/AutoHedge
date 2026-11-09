@@ -37,13 +37,15 @@ def make_team(calls, fail=None):
 
 
 class RunLifecycleTests(unittest.TestCase):
-    def test_unsupported_profile_cannot_silently_call_openai(
+    def test_reasoning_only_profile_cannot_silently_call_openai(
         self,
     ):
         settings = Settings(
             deepseek_api_key="fixture-deepseek",
             role_models={
-                "quant": {"target": {"provider": "deepseek", "model": "unsupported"}}
+                "quant": {
+                    "target": {"provider": "deepseek", "model": "deepseek-reasoner"}
+                }
             },
         )
         settings.require_model_credentials("quant")
@@ -52,7 +54,7 @@ class RunLifecycleTests(unittest.TestCase):
             patch("autohedge.workers.build_agent_team") as factory,
         ):
             system = AutoHedge(output_dir=directory, settings=settings)
-            with self.assertRaisesRegex(ConfigurationError, "not implemented"):
+            with self.assertRaisesRegex(ConfigurationError, "DeepSeek model"):
                 system.run_report("research")
             factory.assert_not_called()
             self.assertIsNone(system.last_report)

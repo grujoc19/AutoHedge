@@ -1,7 +1,7 @@
 # Zielabgleich und verbindlicher Arbeitsstand
 
-Stand: **21. Oktober 2026**, Basisabgleich gegen Code-Commit `68f97dc` auf
-`feat/stabilize-research-core`, anschließend bis **G1.5b** fortgeschrieben.
+Stand: **9. November 2026**, Basisabgleich vom 21. Oktober gegen Code-Commit `68f97dc`
+auf `feat/stabilize-research-core`, anschließend bis **G1.5c** fortgeschrieben.
 Die [erneut bereitgestellte Zieldefinition](PROJECT_GOAL.md)
 ist die fachliche Grundlage. Sie ist bis auf normalisierte Zeilenenden im Original
 gespeichert. Dieser Abgleich beschreibt den Ist-Stand und die daraus folgenden
@@ -11,8 +11,9 @@ Die früheren Review-Befunde und Schritt-IDs bleiben im
 
 **Ergebnis:** Ein getesteter Daten-/Research-Kern ist vorhanden und wird weiterverwendet.
 Ein autonomes Trading-System ist noch nicht implementiert. Die bisherige
-Stabilisierung ist abgeschlossen, die in der neuen Definition zusätzlich verlangte
-KI-Provider-Abstraktion der Foundation jedoch noch nicht vollständig umgesetzt.
+Stabilisierung und die fünf Adapterpfade der zusätzlich verlangten KI-Provider-
+Abstraktion sind offline umgesetzt. Echte API-Verträge, Modell-Capabilities,
+Qualität und Abrechnung bleiben ungeprüft.
 G1.1 liefert den SDK-unabhängigen Modellvertrag und eine validierte Aufrufgrenze,
 G1.2 sechs unveränderliche Rollenprofile mit gezielter Credential-Prüfung.
 G1.3 verwendet beide jetzt im Swarms/OpenAI-Research: fünf validierte Calls,
@@ -22,8 +23,9 @@ Fehlerabbrüche ohne Cloud-Fallback. Andere aktive Backends werden vor
 Agentenkonstruktion abgewiesen. G1.5a ergänzt Anthropic mit LiteLLM-Formatierung
 und nativer Usage-Prüfung. Die dabei entdeckte fehlende Systemprompt-Übergabe
 ist für alle Backends behoben. G1.5b ergänzt Gemini mit deaktiviertem Thinking,
-Textkonvertierung und nativen Usage-/Abschlussprüfungen. Als Nächstes folgt
-G1.5c, DeepSeek.
+Textkonvertierung und nativen Usage-/Abschlussprüfungen. G1.5c ergänzt DeepSeek
+und gemeinsame Chat-Antwortprüfung mit OpenAI. Als Nächstes folgt **G2.1**:
+persistente Quellen-/Ereignisverträge und minimale Datenbank mit Migrationen.
 
 ## 1. Was bereits passt und erhalten bleibt
 
@@ -36,12 +38,13 @@ Strategie validiert. Prototypen unter `experimental/` zählen nicht als fertige 
 | Bestehenden Fork stabilisieren statt neu schreiben | Frische Swarms-Teams pro Lauf, expliziter Orchestrator, getrennte Reports; [main.py](../autohedge/main.py), [workers.py](../autohedge/workers.py), [Orchestrierung](../autohedge/orchestration.py) | Funktionierenden Forschungsablauf hinter kompatibler Fassade erhalten; ereignisgesteuerten Ablauf separat einführen |
 | Reproduzierbare Installation, modulare Struktur und Tests | [pyproject.toml](../pyproject.toml), [uv.lock](../uv.lock), [CI](../.github/workflows/ci.yml), Unit-/Runtime-/Importtests | Kein vollständiger Rewrite und zunächst ein modularer Python-Prozess; CI-Matrix ist konfiguriert, ihre Remote-Ergebnisse hier nicht bestätigt |
 | Zentrale API-Konfiguration, sichere Logs und Fehler | [Settings](../autohedge/config.py), [Logging](../autohedge/logging.py), [HTTP-Transport](../autohedge/providers.py) | Secrets redigieren, Timeouts und begrenzte Read-Retries übernehmen; neue Daten-/Modellanbieter ergänzen |
-| Providerneutraler Modellvertrag (G1.1) | [autohedge.ai](../autohedge/ai/__init__.py): unveränderliche Requests/Replies, korrelierte Ergebnisse, sichere Fehler, bekannte/teilweise/unbekannte Usage; [Details](MODEL_CALLS.md) | Für OpenAI, Ollama, Anthropic und Gemini angebunden; DeepSeek fehlt |
-| Rollenprofile und Schlüsselwahl (G1.2) | [Konfiguration](MODEL_CONFIGURATION.md) für alle sechs Rollen mit Provider/Modell, Limits, geerbtem Timeout und alten Modellvariablen | OpenAI, Ollama, Anthropic und Gemini funktionieren im Research; lokale Rollen benötigen keinen Cloud-Key. Keine ignorierten Profile oder automatische Provider-Fallbacks |
+| Providerneutraler Modellvertrag (G1.1) | [autohedge.ai](../autohedge/ai/__init__.py): unveränderliche Requests/Replies, korrelierte Ergebnisse, sichere Fehler, bekannte/teilweise/unbekannte Usage; [Details](MODEL_CALLS.md) | Für alle fünf Backends offline angebunden; native API-Qualifikation offen |
+| Rollenprofile und Schlüsselwahl (G1.2) | [Konfiguration](MODEL_CONFIGURATION.md) für alle sechs Rollen mit Provider/Modell, Limits, geerbtem Timeout und alten Modellvariablen | Alle fünf Anbieter haben Research-Adapter; lokale Rollen benötigen keinen Cloud-Key. Keine ignorierten Profile oder automatische Provider-Fallbacks |
 | Swarms/OpenAI-Brücke (G1.3) | [Transport und Runner](OPENAI_RESEARCH.md) sowie [ModelCallAudit](../autohedge/ai/audit.py) | Fünf validierte Modellaufrufe mit Stufen-Audit; Exa lesend vor Sentiment, Snapshot ohne zusätzliche Suche; weitere Cloud-Backends offen |
 | Ollama-Adapter (G1.4) | [Nativer Adapter und Einrichtung](OLLAMA_RESEARCH.md): ein POST je Stufe, native Usage/Abschlussgründe und gemischte Rollen | HTTP-Fixtures und echter SDK-Ablauf geprüft; kein Retry/Pull/Cloud-Fallback. Server-Capabilities, Modellqualität und Hardwarebedarf noch ungeprüft |
 | Anthropic-Adapter (G1.5a) | [LiteLLM-Formatter und nativer Transport](ANTHROPIC_RESEARCH.md), Cache-bewusste Usage und gemischte Rollen | Systemprompt-Lücke aus G1.3 behoben; alle Adapter übergeben jetzt den gebundenen Rollenprompt. Offline geprüft; native API/Modellqualität und genaue Cache-Abrechnung ungeprüft |
 | Gemini-Adapter (G1.5b) | [LiteLLM-Textkonvertierung und nativer Transport](GEMINI_RESEARCH.md), getrennte Systemanweisungen, Limits und native Usage | Gemini allein und vier gemischte Anbieter offline geprüft. Das Modell muss deaktiviertes Thinking unterstützen; echte API/Capabilities ungeprüft. Kein Retry/Fallback |
+| DeepSeek-Adapter (G1.5c) | [Kontrollierter Transport und gemeinsame Chat-Antwortprüfung](DEEPSEEK_RESEARCH.md) mit OpenAI, Cache-/Reasoning-/Gesamtzähler geprüft | DeepSeek allein und gemischte Läufe über alle fünf Anbieter offline geprüft; Reasoner-Modell gesperrt. Dokumentationsseite lieferte HTTP 403; native Request-/Usage-Annahmen und Capabilities müssen real bestätigt werden |
 | Strikte normalisierte Daten | [Datenverträge](../autohedge/data/contracts.py), [Qualitätsprüfung](../autohedge/data/quality.py) | Instrument-/Währungsidentität, UTC-Zeiten, explizite Volumeneinheiten, Lücken-/Altersprüfung übernehmen; Orderbuch-, Trade-, Pool- und On-Chain-Verträge fehlen |
 | Echte lesende Datenadapter | [Jupiter](../autohedge/data/jupiter.py), [Exa](../autohedge/data/exa.py), [CoinGecko](../autohedge/data/coingecko.py) | Adapter mit Offline-HTTP-Fixtures vorhanden; keine authentifizierten Live-Contract-Tests. Jupiter braucht zusätzlich einen vertrauenswürdigen Blockzeitresolver; CoinGecko Pro passende Berechtigungen |
 | Historische Candles und zeitgebundene Wiederholung | Pagination, unveränderlicher dateibasierter [HistoryStore](../autohedge/data/history.py) | Historien und Abrufprovenienz erhalten; kein Ersatz für Ereignisdatenbank, Portfolio-Ledger oder kausalen Strategie-Backtest |
@@ -59,7 +62,7 @@ Strategie validiert. Prototypen unter `experimental/` zählen nicht als fertige 
 | Signale | [Action/Signal](../autohedge/domain.py) kennen BUY/SELL/HOLD, Instrument, Erstellzeit, Begründung und Konfidenz; sie sind nicht in den Agentenlauf integriert | **NO TRADE** ergänzen; Evidenz, Ablaufzeit, Horizont und Invalidierungsbedingungen verbindlich machen. HOLD = Bestand bewusst halten; NO TRADE = keine ausreichend belegte neue Gelegenheit / keine Analysefreigabe. Beide erzeugen keine neue Order. Aktuelle Fehler werfen weiterhin Fehler, sie erzeugen noch kein typisiertes NO TRADE |
 | Datenquellen und Reihenfolge | Schwerpunkt bisher Solana-Historie, Jupiter und Exa; weitere Feeds nur allgemein geplant | Nach Foundation zuerst News Collector, **Binance WebSocket und DEX Screener**. Coinbase, GeckoTerminal, Originalquellen und Solana-/Helius-Streams in getrennten Schritten ergänzen; bestehende Solana-Historie weiterverwenden |
 | Asset-/Venue-Umfang | Solana-Spot als erster möglicher Ausführungsbereich | Intelligence darf CEX-/Makro-Daten einbeziehen. CEX-Symbol, Solana-Mint, Pool und Quote-Währung explizit zuordnen; Binance-/Coinbase-Datenfeeds autorisieren keine CEX-Trades. Keine stillschweigende Gleichsetzung von USD und Stablecoins |
-| Modellrouting | Swarms verwendet G1.1/G1.2 mit OpenAI, Ollama, Anthropic oder Gemini je Rolle; Legacy-Variablen bleiben Fallbacks | DeepSeek ergänzen. LiteLLM ist gezielt auf Textkonvertierung begrenzt; native Usage und Abschlussgründe bleiben erhalten. Lokale Server und Gemini-Thinking-Capabilities separat qualifizieren |
+| Modellrouting | Swarms verwendet G1.1/G1.2 mit allen fünf Anbietern je Rolle; Legacy-Variablen bleiben Fallbacks | LiteLLM gezielt für Textkonvertierung nutzen; native Usage und Abschlussgründe erhalten. Lokale Server sowie Gemini-/DeepSeek-Non-Thinking-Capabilities separat qualifizieren. Budgetierte Eskalation fehlt |
 | Recherche und Kosten | Legacy-Research aktiviert Exa standardmäßig; Snapshot-Teams deaktivieren zusätzliche Suche bereits. Der Collector akzeptiert jeden passenden NewsProvider, verlangt standardmäßig News | RSS/Originalquellen werden die Grundversorgung, **Exa bleibt optionale Vertiefung**. Optionale Exa-Suche bedeutet nicht, dass eine News-Strategie ohne erforderliche News handeln darf. Bedarf und Frische je Strategie festlegen; keine stillschweigende Lockerung der Snapshot-Prüfungen |
 | Aufrufgrenzen versus Kostenkontrolle | Modell-/Tool-Retries und Turns begrenzt; Laufdeadline vor/nach synchronen Aufrufen geprüft | Token-/Kostenverbrauch pro Rolle und Lauf, persistente Tages-/Monatsbudgets, sichere Analyse-Caches und begrenzte Eskalation fehlen. Deadline ist keine harte Unterbrechung eines hängenden Custom-Agenten |
 | Speicherung | Historien als unveränderliche JSON-Dateien; JSON-Report nur bei konfiguriertem Ausgabepfad | Persistente Datenbank für Quellen, versionierte Ereignisse, Analysen, Budgets und Audit; später Portfolio/Orders/Fills. Vorhandene Historien referenzieren, keine parallele Neuentwicklung derselben Historienablage |
@@ -115,7 +118,7 @@ wie `2.6` in älteren Texten sind **Legacy-IDs**, keine neue Phasennummerierung.
 
 | Zielphase | Status heute | Bezug zum bisherigen Plan |
 | --- | --- | --- |
-| G1 Foundation | Stabilisierung, Modellvertrag, Rollenprofile, Swarms-Brücke und OpenAI-/Ollama-/Anthropic-/Gemini-Adapter vorhanden; DeepSeek offen | Legacy 1.1–1.6 erhalten; Grundlagen aus 3.1a/3.3 vorziehen |
+| G1 Foundation | Stabilisierung, Modellvertrag, Rollenprofile, Swarms-Brücke und alle fünf Adapter offline umgesetzt; reale API-Qualifikation offen | Legacy 1.1–1.6 erhalten; Grundlagen aus 3.1a/3.3 vorgezogen |
 | G2 Data Collection | Verträge, drei Read-Adapter, Historie und Snapshots vorhanden; kontinuierliche Collector/DB/WS fehlen | Legacy 2.1–2.5 erhalten; 2.6/2.8 konkretisieren und aufteilen |
 | G3 AI Market Intelligence | Indikatoren vorhanden; lokale Analyse, News-Klassifikation, Anomaly Detection und Korrelation fehlen | Legacy 3.1a–3.1c und 3.3 |
 | G4 On-Chain Intelligence | Fehlt | Legacy 2.7 und 3.1d |
@@ -126,7 +129,7 @@ wie `2.6` in älteren Texten sind **Legacy-IDs**, keine neue Phasennummerierung.
 ## 6. Priorisierte, kleine Arbeitspakete
 
 Reihenfolge innerhalb einer Phase ist die Arbeitsreihenfolge. **Nächster
-Implementierungsschritt ist G1.5c**, kein Neustart der bereits getesteten Foundation.
+Implementierungsschritt ist G2.1**, kein Neustart der bereits getesteten Foundation.
 Die späteren Gruppen sind ein Backlog; sie werden nicht gleichzeitig begonnen.
 Jeder Schritt erhält passende Unit-/Integrationstests und einen kleinen
 reviewbaren Commit/Feature-PR. Kein automatischer Merge, keine Live-Aktivierung.
@@ -139,7 +142,7 @@ reviewbaren Commit/Feature-PR. Kein automatischer Merge, keine Live-Aktivierung.
 | G1.4 / umgesetzt | [Ollama-Adapter](OLLAMA_RESEARCH.md) mit denselben Verträgen und Rollenrouting | HTTP-Fixtures prüfen Payload/Usage/Limits/Schema, Timeout, Ausfall und kaputtes JSON; echte Swarms-Zyklen prüfen lokale/gemischte Rollen und Fehler ohne Cloud-Fallback; reale Serverinstallation ungeprüft |
 | G1.5a / umgesetzt | [Anthropic](ANTHROPIC_RESEARCH.md) über LiteLLM-Textformatierung und kontrollierten nativen Transport | Cache-Zähler/fehlende Usage, Auth/Rate-Limit/Timeout/Schema/Refusal/Tools und gemischte Swarms-Läufe ohne Fallback geprüft. Rollen-Systemprompts für alle Adapter gebunden. LiteLLM direkt auf vorhandene Version gepinnt; native API ungeprüft |
 | G1.5b / umgesetzt | [Gemini](GEMINI_RESEARCH.md) über LiteLLM-Textkonvertierung und kontrollierten nativen Transport | System-/Text-Treue, URL-Modellnamen, Limits, Zähler/Cache/Thinking, Blockaden, Fehler ohne Fallback und vier gemischte Anbieter offline geprüft. Reale API und Modell-Capabilities ungeprüft |
-| G1.5c / P2 | DeepSeek separat ergänzen; LiteLLM-Konvertierung gezielt verwenden, native Usage erhalten | G1.3/G1.5a–b; Konfiguration, Antwort-/Usage-Normalisierung, Auth-/Rate-Limit-/Schemafehler offline prüfen; echte Modellqualität separat evaluieren |
+| G1.5c / umgesetzt | [DeepSeek](DEEPSEEK_RESEARCH.md), LiteLLM-Textformatierung, native Usage und gemeinsame Chat-Antwortprüfung mit OpenAI | Bestehende OpenAI-Tests bestehen; Konfiguration, Cache/Reasoning/Gesamtzähler, Limits, Fehler ohne Fallback und gemischte Läufe über fünf Backends offline geprüft. Reale API/Modellqualität offen |
 | G2.1 / P1 | Persistenten Quellen-/Ereignisvertrag und minimale Datenbank mit Migration einführen; SQLite als erster Ein-Prozess-Vorschlag | G1 abgeschlossen; Raw-Referenz, event_time/received_at/first_seen/known_at, Version und Quelle bleiben über Neustart erhalten; noch kein Broker-Ledger |
 | G2.2a–b / P1 | RSS-Collector zunächst CoinDesk, danach BlockBeats mit je eigenen Fixtures | G2.1; Wiederabruf/Duplikat/fehlendes Datum/Edit/defekter Feed getestet. Keine erfundene Publikationszeit, Exa nicht erforderlich |
 | G2.3 / P1 | News-Deduplizierung und Revisionen über Abrufe hinweg | G2.2; exakte Duplikate und Edits deterministisch; unklare semantische Gleichheit explizit. Repost ist kein unabhängiger Beleg |
@@ -175,9 +178,10 @@ Nach G1.2 waren es 178 Unit-/7 Integrationstests plus 1 Importtest.
 Nach G1.3 waren es 198 Unit-/9 Integrationstests plus 1 Importtest.
 Nach G1.4 waren es 208 Unit-/11 Integrationstests plus 1 Importtest.
 Nach G1.5a waren es 221 Unit-/13 Integrationstests plus 1 Importtest.
-Nach G1.5b auf Python 3.12 erneut ausgeführt:
+Nach G1.5b waren es 233 Unit-/15 Integrationstests plus 1 Importtest.
+Nach G1.5c auf Python 3.12 erneut ausgeführt:
 
-- **233 Unit-Tests, 15 Runtime-Integrationstests und 1 Importtest bestanden.**
+- **245 Unit-Tests, 17 Runtime-Integrationstests und 1 Importtest bestanden.**
 - Ruff-Checks/Formatierung, Dependency-Check, sdist/Wheel-Build und Installation
   des Wheels mit gesperrtem Netzwerk beim Smoke-Test außerhalb des Checkouts bestanden.
 - Runtime-Tests verwenden installierte Swarms-Pakete mit Fake-Modellantworten und
@@ -185,8 +189,8 @@ Nach G1.5b auf Python 3.12 erneut ausgeführt:
 - Keine echten Modell-/Marktdatenaufrufe, Wallet-Zugriffe oder Orders; die
   Cloud-Umgebung meldet aktuell keine konfigurierten Secrets.
 
-G1.1–G1.5b erweitern den Research-Kern um Modellverträge, Profile sowie OpenAI-,
-Ollama-, Anthropic- und Gemini-Transport, keine Handelsfunktion. Die Tests belegen keine der hier als fehlend markierten Funktionen. Nach jedem
+G1.1–G1.5c erweitern den Research-Kern um Modellverträge, Profile sowie OpenAI-,
+Ollama-, Anthropic-, Gemini- und DeepSeek-Transport, keine Handelsfunktion. Die Tests belegen keine der hier als fehlend markierten Funktionen. Nach jedem
 Implementierungsschritt Status, Belege und Abnahmen dieses Dokuments aktualisieren;
 neue Wünsche in der Zieldefinition beziehungsweise einem begründeten Änderungsstand
 festhalten. Priorität bleibt: Intelligence und messbare Qualität aufbauen,

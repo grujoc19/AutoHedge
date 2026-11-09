@@ -88,5 +88,6 @@ mit gesperrten Sockets und MockTransport prüfen Gemini allein sowie vier gemisc
 Anbieter. Der Wheel-Test importiert den Adapter ohne Modell-SDK und baut ein Team
 ohne Netzaufruf. Echte API-Zugänge, Modellqualität und Serververhalten sind ungeprüft.
 
-Nächste Arbeit steht im [Zielabgleich](GOAL_ALIGNMENT.md): zunächst G1.5c DeepSeek,
-danach persistente Data Collection. Signale, Risk Engine und Trading fehlen weiterhin.
+DeepSeek ist inzwischen ebenfalls angebunden. Nächste Arbeit steht im
+[Zielabgleich](GOAL_ALIGNMENT.md): G2.1, persistente Quellen-/Ereignisverträge und
+minimale Datenbank. Signale, Risk Engine und Trading fehlen weiterhin.

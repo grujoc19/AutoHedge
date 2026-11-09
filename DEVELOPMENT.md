@@ -13,7 +13,10 @@ without fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) adds Anthropic with LiteLL
 text formatting and application-owned transport/Usage checks. The bridge now
 preserves bound role system prompts for all providers. Other backends are rejected
 before agent construction. [G1.5b](docs/GEMINI_RESEARCH.md) adds Gemini with native
-finish-reason/usage checks and disabled thinking. G1.5c, DeepSeek, is next.
+finish-reason/usage checks and disabled thinking. [G1.5c](docs/DEEPSEEK_RESEARCH.md)
+adds DeepSeek and reuses native Chat Completions response validation with OpenAI.
+All five adapters are implemented offline; live API qualification remains open.
+Next is G2.1, persistent source/event contracts and a minimal database.
 
 ## Implemented scope
 

@@ -1,6 +1,6 @@
 # AutoHedge: Repository-Review und Entwicklungsplan
 
-Aktualisiert: 21. Oktober 2026. Der ursprüngliche Repository-/PR-Review vom
+Aktualisiert: 9. November 2026. Der ursprüngliche Repository-/PR-Review vom
 20. Oktober und seine Schritt-IDs bleiben unten als **Legacy-Plan** erhalten.
 Die erneut bereitgestellte [Zieldefinition](docs/PROJECT_GOAL.md) ist maßgeblich.
 Der [aktuelle Zielabgleich](docs/GOAL_ALIGNMENT.md) dokumentiert belegten Ist-Stand,
@@ -18,8 +18,11 @@ ohne Fallback. [G1.5a](docs/ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit LiteLL
 Formatierung und nativer Usage-Prüfung; außerdem bleiben Rollen-Systemprompts
 jetzt an der Modellgrenze erhalten. [G1.5b](docs/GEMINI_RESEARCH.md) ergänzt
 Gemini mit kontrolliertem Text-/Usage-Vertrag und deaktiviertem Thinking.
-Nächste Arbeit ist **G1.5c: DeepSeek**. Danach folgen
-persistente News Collection, Binance WebSocket und DEX Screener. Der bisher als
+[G1.5c](docs/DEEPSEEK_RESEARCH.md) ergänzt DeepSeek und gemeinsame Antwortprüfung
+mit OpenAI. Alle fünf Modelladapter sind offline umgesetzt; echte API-Verträge
+bleiben zu qualifizieren. Nächste Arbeit ist **G2.1: persistente Quellen-/Ereignis-
+verträge und minimale Datenbank mit Migrationen**. Danach folgen
+News Collection, Binance WebSocket und DEX Screener. Der bisher als
 nächster Schritt geplante Legacy-Schritt 2.6 wird entsprechend aufgeteilt.
 
 ## Umsetzungsstand nach Merge von PR #1
@@ -277,9 +280,11 @@ Lifecycle-/Snapshot-/Fehlertests bestehen. G1.4 ergänzt den nativen Ollama-Adap
 mit denselben Verträgen, vollständig lokalen oder gemischten Rollen und
 Fehlerabbrüchen ohne Cloud-Fallback. G1.5a ergänzt Anthropic und behebt die
 Systemprompt-Übergabe für alle Backends. G1.5b ergänzt Gemini, einschließlich
-Fehlerabbrüchen und Tests für vier gemischte Anbieter. Als Nächstes folgt G1.5c,
-DeepSeek in einem getrennten Schritt.
-Anschließend G2: persistente Ereignisse, RSS Collector, Binance WebSocket und DEX
+Fehlerabbrüchen und Tests für vier gemischte Anbieter. G1.5c ergänzt DeepSeek und
+gemeinsame native Antwortprüfung mit OpenAI. Die Foundation ist damit offline
+umgesetzt, produktive API-Verträge und Modellqualität bleiben ungeprüft.
+Als Nächstes G2.1: Quellen-/Ereignisverträge und minimale Datenbank mit Migrationen,
+danach RSS Collector, Binance WebSocket und DEX
 Screener in kleinen Schritten. Inhaltshashes ersetzen keine semantischen Ereignisse
 oder unabhängigen Bestätigungen. CoinGecko-Live-Vertrag/Zugang und vertrauenswürdige
 Jupiter-Blockzeitauflösung bleiben offen. [docs/GOAL_ALIGNMENT.md](docs/GOAL_ALIGNMENT.md)

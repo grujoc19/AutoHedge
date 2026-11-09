@@ -15,6 +15,7 @@ from autohedge.ai.config import (
     RoleModelConfig,
     RoleModels,
     native_gemini_model,
+    native_deepseek_model,
 )
 from autohedge.ai.contracts import ModelTarget, Seconds
 from autohedge.errors import ConfigurationError
@@ -43,6 +44,7 @@ class Settings(BaseModel):
     search_enabled: bool = True
     openai_base_url: HttpUrl = HttpUrl("https://api.openai.com/v1")
     anthropic_base_url: HttpUrl = HttpUrl("https://api.anthropic.com/v1")
+    deepseek_base_url: HttpUrl = HttpUrl("https://api.deepseek.com/v1")
     gemini_base_url: HttpUrl = HttpUrl(
         "https://generativelanguage.googleapis.com/v1beta"
     )
@@ -76,6 +78,7 @@ class Settings(BaseModel):
     @field_validator(
         "openai_base_url",
         "anthropic_base_url",
+        "deepseek_base_url",
         "gemini_base_url",
         "exa_base_url",
         "jupiter_base_url",
@@ -173,6 +176,7 @@ class Settings(BaseModel):
                 "ollama",
                 "anthropic",
                 "gemini",
+                "deepseek",
             }:
                 raise ConfigurationError(
                     "Selected research provider is not implemented yet"
@@ -189,6 +193,13 @@ class Settings(BaseModel):
                 except ValueError:
                     raise ConfigurationError(
                         "Invalid native Gemini model identifier"
+                    ) from None
+            if config.target.provider == "deepseek":
+                try:
+                    native_deepseek_model(config.target.model)
+                except ValueError:
+                    raise ConfigurationError(
+                        "Invalid or unsupported non-thinking DeepSeek model"
                     ) from None
 
     def require_research_credentials(self):
@@ -229,6 +240,7 @@ ENV_FIELDS = {
     "AUTOHEDGE_SEARCH_ENABLED": "search_enabled",
     "AUTOHEDGE_OPENAI_BASE_URL": "openai_base_url",
     "AUTOHEDGE_ANTHROPIC_BASE_URL": "anthropic_base_url",
+    "AUTOHEDGE_DEEPSEEK_BASE_URL": "deepseek_base_url",
     "AUTOHEDGE_GEMINI_BASE_URL": "gemini_base_url",
     "AUTOHEDGE_OLLAMA_BASE_URL": "ollama_base_url",
     "AUTOHEDGE_EXA_BASE_URL": "exa_base_url",

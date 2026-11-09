@@ -127,4 +127,7 @@ fünf gemockten OpenAI-POSTs und einem Exa-Abruf sowie frühe Abbrüche ohne Ret
 Live-API-Zugang, reale Modellqualität und Abrechnungsgenauigkeit sind ungeprüft.
 Der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md) ist inzwischen angebunden;
 [Anthropic](ANTHROPIC_RESEARCH.md) und [Gemini](GEMINI_RESEARCH.md) ebenfalls.
+G1.5c ergänzt [DeepSeek](DEEPSEEK_RESEARCH.md); die ursprünglichen nativen Chat-
+Schemas und Antwortprüfungen liegen jetzt in einem gemeinsamen Modul, ohne die
+OpenAI-Payload oder ihren Transport zu ändern. Die bisherigen Tests bestehen.
 Nächste Arbeit steht im [Zielabgleich](GOAL_ALIGNMENT.md).

@@ -329,7 +329,7 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             Settings(anthropic_api_key=SecretStr("   ")).anthropic_api_key
         )
 
-    def test_unsupported_backends_are_rejected_even_with_valid_keys(
+    def test_invalid_deepseek_native_names_are_rejected_even_with_valid_keys(
         self,
     ):
         for role in ("quant", "trading_director", "news_intelligence", "risk_manager"):
@@ -337,7 +337,7 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
                 openai_api_key="fixture-key",
                 exa_api_key="fixture-exa",
                 deepseek_api_key="fixture-deepseek",
-                role_models={role: profile("deepseek", "unsupported")},
+                role_models={role: profile("deepseek", "openai/deepseek-chat")},
             )
             settings.require_model_credentials(role)
             for configured in (
@@ -346,7 +346,7 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             ):
                 with (
                     self.subTest(role=role),
-                    self.assertRaisesRegex(ConfigurationError, "not implemented"),
+                    self.assertRaisesRegex(ConfigurationError, "DeepSeek model"),
                 ):
                     configured.require_research_credentials()
 
@@ -430,6 +430,36 @@ AUTOHEDGE_QUANT_MODEL=explicit-file-quant
             with self.subTest(model=model), self.assertRaises(ConfigurationError):
                 Settings(
                     role_models={"quant": profile("gemini", model)}
+                ).require_research_model_configuration()
+
+    def test_deepseek_research_requires_its_key_and_non_thinking_native_model(self):
+        settings = Settings(
+            search_enabled=False,
+            openai_api_key="unrelated",
+            role_models={
+                role: profile("deepseek", "deepseek/deepseek-chat")
+                for role in (
+                    "quant",
+                    "trading_director",
+                    "news_intelligence",
+                    "risk_manager",
+                )
+            },
+        )
+        with self.assertRaisesRegex(ConfigurationError, "DEEPSEEK_API_KEY"):
+            settings.require_research_credentials()
+        settings.model_copy(
+            update={"deepseek_api_key": SecretStr("fixture")}
+        ).require_research_credentials()
+        for model in (
+            "deepseek/",
+            "deepseek-reasoner",
+            "deepseek/deepseek-reasoner",
+            "openai/deepseek-chat",
+        ):
+            with self.subTest(model=model), self.assertRaises(ConfigurationError):
+                Settings(
+                    role_models={"quant": profile("deepseek", model)}
                 ).require_research_model_configuration()
 
     def test_inactive_future_roles_do_not_require_credentials_for_legacy_research(self):

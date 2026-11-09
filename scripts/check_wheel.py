@@ -95,6 +95,7 @@ from autohedge.ai import AgentRole, RoleModelOverride, RoleModels
 from autohedge.ai.openai import OpenAIProvider
 from autohedge.ai.anthropic import AnthropicProvider
 from autohedge.ai.gemini import GeminiProvider
+from autohedge.ai.deepseek import DeepSeekProvider
 from autohedge.ai.ollama import OllamaProvider
 from autohedge.ai.swarms import SwarmsModelBridge
 from autohedge.ai.audit import ModelCallAudit
@@ -146,6 +147,14 @@ gemini_settings.require_research_credentials()
 gemini_team = build_agent_team(settings=gemini_settings)
 for name in ("director", "quant", "sentiment", "risk"):
     assert isinstance(getattr(gemini_team, name).bridge.provider, GeminiProvider)
+deepseek_settings = Settings(search_enabled=False, deepseek_api_key="offline-fixture", role_models={
+    role: {"target": {"provider": "deepseek", "model": "deepseek-chat"}}
+    for role in ("quant", "trading_director", "news_intelligence", "risk_manager")
+})
+deepseek_settings.require_research_credentials()
+deepseek_team = build_agent_team(settings=deepseek_settings)
+for name in ("director", "quant", "sentiment", "risk"):
+    assert isinstance(getattr(deepseek_team, name).bridge.provider, DeepSeekProvider)
 system = AutoHedge(output_dir='outputs')
 system.conversation.add(role='user', content='installed wheel check')
 assert 'installed wheel check' in str(system.conversation.return_messages_as_list())

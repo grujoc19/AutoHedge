@@ -16,6 +16,13 @@ def native_gemini_model(model: str) -> str:
     return native
 
 
+def native_deepseek_model(model: str) -> str:
+    native = model.removeprefix("deepseek/")
+    if not native or "/" in native or native == "deepseek-reasoner":
+        raise ValueError("Invalid or unsupported non-thinking DeepSeek model")
+    return native
+
+
 class AgentRole(str, Enum):
     NEWS_INTELLIGENCE = "news_intelligence"
     MARKET_ANOMALY = "market_anomaly"

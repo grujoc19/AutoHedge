@@ -48,19 +48,19 @@ class AgentLifecycleTests(unittest.TestCase):
             self.assertIsNone(worker.agent.kwargs["tools"])
             self.assertEqual(worker.agent.kwargs["max_loops"], 1)
 
-    def test_role_overrides_fail_before_any_legacy_agent_is_constructed(self):
+    def test_reasoning_only_profile_fails_before_any_agent_is_constructed(self):
         for role in ("quant", "news_intelligence", "trading_director", "risk_manager"):
             settings = Settings(
                 role_models={
                     role: {
-                        "target": {"provider": "deepseek", "model": "new-role-model"}
+                        "target": {"provider": "deepseek", "model": "deepseek-reasoner"}
                     }
                 }
             )
             with patch("autohedge.workers.Agent") as agent:
                 with (
                     self.subTest(role=role),
-                    self.assertRaisesRegex(ConfigurationError, "not implemented"),
+                    self.assertRaisesRegex(ConfigurationError, "DeepSeek model"),
                 ):
                     build_agent_team(settings=settings)
                 agent.assert_not_called()

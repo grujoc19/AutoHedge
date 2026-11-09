@@ -11,7 +11,7 @@ gezielte Credential-Prüfung; [G1.3](OPENAI_RESEARCH.md) verwendet beide im
 Swarms/OpenAI-Research. [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama am selben
 Vertrag; [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic mit LiteLLM-Formatierung
 und nativer Antwortprüfung. [G1.5b](GEMINI_RESEARCH.md) ergänzt Gemini; DeepSeek
-folgt getrennt. Das Modul unterstützt
+ist in [G1.5c](DEEPSEEK_RESEARCH.md) ebenfalls angebunden. Das Modul unterstützt
 zunächst Textantworten; Tool-Calls, Streaming und multimodale Inhalte sind
 kein Teil dieses Vertrags. Swarms bleibt Runtime; Exa wird vor Sentiment als
 expliziter lesender Abruf außerhalb der Modellgrenze ausgeführt.
@@ -123,6 +123,7 @@ Verträge außerhalb des Checkouts.
 
 G1.2, [Provider-/Modellkonfiguration für alle sechs Rollen](MODEL_CONFIGURATION.md),
 ist implementiert und mit [G1.3](OPENAI_RESEARCH.md) an Swarms/OpenAI angebunden.
-G1.4 bindet Ollama mit denselben Verträgen an, G1.5a Anthropic und G1.5b Gemini.
+G1.4 bindet Ollama mit denselben Verträgen an, G1.5a Anthropic, G1.5b Gemini und
+G1.5c DeepSeek. OpenAI und DeepSeek teilen ihre native Chat-Antwortprüfung.
 Nächste Aufgaben stehen im [Zielabgleich](GOAL_ALIGNMENT.md). Das bleiben Research-Aufrufe ohne
 Handelssignal, Risk-Freigabe oder Ausführungsbefugnis.

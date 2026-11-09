@@ -11,11 +11,12 @@ werden dafür geladen oder aufgerufen.
 verwendet die Profile seiner vier aktiven Rollen, einschließlich Modell, Limits
 und Timeout. Ohne Profil bleiben die zwei alten Modellvariablen Fallbacks.
 [G1.4](OLLAMA_RESEARCH.md) ergänzt Ollama als echten Adapter und gemischte
-lokale/Cloud-Rollen; [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic und
-[G1.5b](GEMINI_RESEARCH.md) Gemini. Andere aktive
-Backends werden vor Agentenkonstruktion mit
+lokale/Cloud-Rollen; [G1.5a](ANTHROPIC_RESEARCH.md) ergänzt Anthropic,
+[G1.5b](GEMINI_RESEARCH.md) Gemini und [G1.5c](DEEPSEEK_RESEARCH.md) DeepSeek.
+Alle fünf konfigurierbaren Anbieter haben damit einen Offline-geprüften Adapter.
+Ungültige Profile und unzulässige Modellmodi werden vor Agentenkonstruktion mit
 `ConfigurationError` abgewiesen; kein Profil wird ignoriert oder still durch
-OpenAI ersetzt. DeepSeek folgt separat. OpenAI-Endpunkt:
+OpenAI ersetzt. OpenAI-Endpunkt:
 `AUTOHEDGE_OPENAI_BASE_URL`, Default `https://api.openai.com/v1`, nur HTTPS ohne
 eingebettete Credentials, Query oder Fragment. Ollama-Endpunkt:
 `AUTOHEDGE_OLLAMA_BASE_URL`, Default `http://127.0.0.1:11434`, HTTP/HTTPS ohne
@@ -31,6 +32,13 @@ Query oder Fragment. Nur native Modellkennungen mit ASCII-Buchstaben/Ziffern,
 Punkt, Unterstrich oder Bindestrich sind erlaubt, optional mit führendem `gemini/`.
 Das Modell muss `thinkingBudget=0` unterstützen; der Adapter erweitert oder
 entfernt diese Einstellung nicht automatisch. Details stehen im G1.5b-Dokument.
+
+DeepSeek-Endpunkt: `AUTOHEDGE_DEEPSEEK_BASE_URL`, Default `https://api.deepseek.com/v1`,
+nur HTTPS ohne Credentials, Query oder Fragment. Ein führendes `deepseek/` wird
+beim Senden entfernt; weitere Slashes sind ungültig. Der erste Adaptermodus setzt
+`thinking.type=disabled`; `deepseek-reasoner` ist vorab gesperrt. Andere Modelle
+brauchen echte Capability-Prüfung. API-Annahmen und die derzeit nicht zugängliche
+Dokumentationsseite sind im G1.5c-Dokument festgehalten.
 
 ## Rollen, Variablen und Defaults
 
@@ -167,7 +175,7 @@ wird zusätzlich außerhalb des Checkouts geprüft.
 
 Die [G1.3-Anbindung](OPENAI_RESEARCH.md) und der [G1.4-Ollama-Adapter](OLLAMA_RESEARCH.md)
 sind umgesetzt, ebenso [G1.5a mit Anthropic](ANTHROPIC_RESEARCH.md) und
-[G1.5b mit Gemini](GEMINI_RESEARCH.md).
+[G1.5b mit Gemini](GEMINI_RESEARCH.md) sowie [G1.5c mit DeepSeek](DEEPSEEK_RESEARCH.md).
 Zusätzliche echte Swarms-Zyklen mit HTTP-Fixtures prüfen lokale
 und gemischte Rollen sowie Fehler ohne Cloud-Fallback. Profile allein starten
 weiterhin kein Modell. Nächste Aufgaben stehen im [Zielabgleich](GOAL_ALIGNMENT.md).

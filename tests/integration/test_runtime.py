@@ -629,6 +629,142 @@ for failure in ('auth','rate_limit','timeout','unavailable','bad_json','blocked_
     assert len(calls)==2, (failure,len(calls))
 """)
 
+    def test_public_deepseek_and_mixed_runs_cover_all_five_backends(self):
+        self.run_offline("""
+import json
+import tempfile
+from datetime import datetime,timezone
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.deepseek import DeepSeekProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.ai.anthropic import AnthropicProvider
+from autohedge.ai.gemini import GeminiProvider
+from autohedge.ai.ollama import OllamaProvider
+from autohedge.config import Settings
+roles=('trading_director','quant','news_intelligence','risk_manager')
+now=datetime(2026,11,9,12,tzinfo=timezone.utc)
+observed=set()
+for backends in (('deepseek',)*4,('deepseek','ollama','anthropic','gemini'),('deepseek','openai','anthropic','gemini')):
+    profiles={role:{'target':{'provider':backend,'model':('deepseek/' if backend=='deepseek' else '')+'fixture-'+role},
+        'max_output_tokens':100+i,'timeout_seconds':7+i} for i,(role,backend) in enumerate(zip(roles,backends))}
+    keys={backend+'_api_key':'fixture-'+backend for backend in set(backends) if backend!='ollama'}
+    settings=Settings(role_models=profiles,search_enabled=False,**keys)
+    settings.require_research_credentials()
+    calls=[]
+    def respond(request):
+        body=json.loads(request.content)
+        calls.append((request,body))
+        assert not body.get('tools')
+        if request.url.host=='api.deepseek.com':
+            assert request.headers['authorization']=='Bearer fixture-deepseek'
+            assert request.url.path=='/v1/chat/completions'
+            assert body['thinking']=={'type':'disabled'} and body['stream'] is False
+            assert body['messages'][0]['role']=='system' and 'This is research only.' in body['messages'][0]['content']
+            usage={'prompt_tokens':10,'completion_tokens':2,'total_tokens':12,'prompt_cache_hit_tokens':7,'prompt_cache_miss_tokens':3}
+            if body['model'].endswith('risk_manager'):
+                usage={'completion_tokens':2}
+            return httpx.Response(200,json={'model':body['model']+'-revision',
+                'choices':[{'index':0,'finish_reason':'stop','message':{'role':'assistant','content':'offline DeepSeek evidence'}}],
+                'usage':usage})
+        if request.url.host=='api.openai.com':
+            assert request.headers['authorization']=='Bearer fixture-openai'
+            return httpx.Response(200,json={'model':body['model'],'choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline OpenAI evidence'}}],'usage':{'prompt_tokens':10,'completion_tokens':2}})
+        if request.url.host=='api.anthropic.com':
+            assert request.headers['x-api-key']=='fixture-anthropic'
+            return httpx.Response(200,json={'type':'message','role':'assistant','model':body['model'],'stop_reason':'end_turn',
+                'content':[{'type':'text','text':'offline Anthropic evidence'}],
+                'usage':{'input_tokens':10,'output_tokens':2,'cache_creation_input_tokens':0,'cache_read_input_tokens':0}})
+        if request.url.host=='generativelanguage.googleapis.com':
+            assert request.headers['x-goog-api-key']=='fixture-gemini'
+            return httpx.Response(200,json={'modelVersion':'fixture','candidates':[{'finishReason':'STOP',
+                'content':{'role':'model','parts':[{'text':'offline Gemini evidence'}]}}],
+                'usageMetadata':{'promptTokenCount':10,'candidatesTokenCount':2,'totalTokenCount':12}})
+        assert request.url.host=='127.0.0.1'
+        assert 'authorization' not in request.headers and 'x-api-key' not in request.headers and 'x-goog-api-key' not in request.headers
+        return httpx.Response(200,json={'model':body['model'],'done':True,'done_reason':'stop',
+            'message':{'role':'assistant','content':'offline local evidence'},'prompt_eval_count':10,'eval_count':2})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client,tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.DeepSeekProvider',side_effect=lambda settings:DeepSeekProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)), patch(
+            'autohedge.workers.AnthropicProvider',side_effect=lambda settings:AnthropicProvider(settings,client=client)), patch(
+            'autohedge.workers.GeminiProvider',side_effect=lambda settings:GeminiProvider(settings,client=client)), patch(
+            'autohedge.workers.OllamaProvider',side_effect=lambda settings:OllamaProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory,clock=lambda:now)
+            report=engine.run_report('Supplied frozen evidence')
+    assert len(calls)==5
+    for stage,(sent,body),role in zip(report.stages,calls,(roles[0],roles[1],roles[2],roles[3],roles[0])):
+        audit,=stage.model_calls
+        config=settings.model_for(role)
+        observed.add(config.target.provider)
+        assert audit.role.value==role and audit.target==config.target
+        assert audit.timeout_seconds==config.timeout_seconds==sent.extensions['timeout']['read']
+        assert audit.max_output_tokens==config.max_output_tokens
+        if config.target.provider=='deepseek':
+            assert body['max_tokens']==config.max_output_tokens
+            assert audit.resolved_model==config.target.model.removeprefix('deepseek/')+'-revision'
+            assert audit.usage.output_tokens==2
+            assert audit.usage.input_tokens==(None if role=='risk_manager' else 10)
+        else:
+            assert audit.usage.total_tokens==12
+    assert len({stage.model_calls[0].request_id for stage in report.stages})==5
+    assert report.execution_enabled is False
+assert observed=={'deepseek','openai','anthropic','gemini','ollama'}
+""")
+
+    def test_rejected_deepseek_quant_stops_without_retry_fallback_or_full_report(self):
+        self.run_offline("""
+import tempfile
+from unittest.mock import patch
+import httpx
+from autohedge import AutoHedge
+from autohedge.ai.deepseek import DeepSeekProvider
+from autohedge.ai.openai import OpenAIProvider
+from autohedge.config import Settings
+from autohedge.errors import ResearchError
+settings=Settings(openai_api_key='fixture-openai',deepseek_api_key='fixture-deepseek',search_enabled=False,
+    role_models={'quant':{'target':{'provider':'deepseek','model':'deepseek-chat'},'max_output_tokens':100}})
+for failure in ('auth','balance','rate_limit','timeout','unavailable','bad_json','length','content_filter','insufficient_system_resource','unknown','reasoning','tool_calls','usage','overrun'):
+    calls=[]
+    def respond(request):
+        calls.append(request)
+        if request.url.host=='api.openai.com':
+            assert len(calls)==1,'No fallback or downstream call is allowed'
+            return httpx.Response(200,json={'model':'fixture','choices':[{'index':0,'finish_reason':'stop',
+                'message':{'role':'assistant','content':'offline thesis'}}]})
+        assert request.url.host=='api.deepseek.com'
+        if failure in ('auth','balance','rate_limit'):
+            return httpx.Response({'auth':401,'balance':402,'rate_limit':429}[failure],text='private-body')
+        if failure=='timeout':
+            raise httpx.ReadTimeout('private-body')
+        if failure=='unavailable':
+            raise httpx.ConnectError('private-body')
+        if failure=='bad_json':
+            return httpx.Response(200,text='private-body')
+        reason=failure if failure in ('length','content_filter','insufficient_system_resource','unknown','tool_calls') else 'stop'
+        message={'role':'assistant','content':'private-body'}
+        if failure=='reasoning':
+            message['reasoning_content']='private-thinking'
+        usage={'prompt_tokens':10,'completion_tokens':101 if failure=='overrun' else 2}
+        if failure=='usage':
+            usage['prompt_cache_hit_tokens']=11
+        return httpx.Response(200,json={'model':'fixture','choices':[{'index':0,'finish_reason':reason,'message':message}],'usage':usage})
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client,tempfile.TemporaryDirectory() as directory:
+        with patch('autohedge.workers.DeepSeekProvider',side_effect=lambda settings:DeepSeekProvider(settings,client=client)), patch(
+            'autohedge.workers.OpenAIProvider',side_effect=lambda settings:OpenAIProvider(settings,client=client)):
+            engine=AutoHedge(settings=settings,output_dir=directory)
+            try:
+                engine.run_report('Offline failing research')
+            except ResearchError as error:
+                assert error.stage=='quant' and 'private-body' not in str(error)
+            else:
+                raise AssertionError('Rejected DeepSeek response must stop the cycle')
+            assert engine.last_report is None
+    assert len(calls)==2,(failure,len(calls))
+""")
+
     def test_real_agents_conversation_and_tool_schemas(self):
         output = self.run_offline("""
 import json
